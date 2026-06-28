@@ -1,0 +1,3165 @@
+<!--
+AFT: user-approved-ai-generated
+AGENT: P-Dawg-CODEX
+GENERATED_AT: 2026-05-21T18:18:19.357Z
+PRODUCT_STAGE: S3_ENTERPRISE_INSTALL
+REQUIRED_FOR: S3,S4
+FILE_ROLE: runtime
+PREVIOUS_PROVENANCE: Dima // 2026-05-21T18:11:52.349Z
++----------------------------------------------------------------------------+
+| CONTINUUM-META SUBSTRATE // v1.0.1                                           |
+| PROVENANCE: P-Dawg-CODEX // 2026-05-21T18:18:19.357Z                         |
++----------------------------------------------------------------------------+
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GOD TERMINAL // C-DAWG v1.3.4</title>
+<!--
+  god-terminal v1.3.4
+  Date: 2026-05-16
+  AFT: AI-generated-user-reviewed-pending
+  Built by: C-Dawg (Claude Opus 4.7 Desktop seat). v1.3.3 Identity Manager v2 via docs/identity-manager-v2-spec.md.
+
+  Lineage:
+  - v0.1: shipped by C-Dawg (Claude desktop)
+  - v0.2: drafted by C-Dawg inside v0.1 (token-truncated), shipped by C-Dawg (Claude desktop)
+  - v1.0: shipped by C-Dawg (Claude desktop). Closed the recursion loop.
+  - v1.1: Gemini tool support + confabulation guard. Built by Claude Opus 4.7 Desktop seat.
+  - v1.3: OpenAI tools, token meter, confab guard extension. Built by Claude Opus 4.7 Desktop seat.
+  - v1.3.1: Routing suggester (live datums), body-switch warning, system timestamp injection, confab guard tuning. Built by Claude Opus 4.7 Desktop seat.
+  - v1.3.2: Identity Manager (cryptographic fingerprints, work signing), branded proof-of-life template. Built by C-Dawg (Claude Opus 4.7) with Identity Manager endpoints via bridge.js.
+  - v1.3.3: Identity Manager v2 (file-based, deterministic SHA256, real comparison). Built by C-Dawg (Claude Opus 4.7) per docs/identity-manager-v2-spec.md.
+  - v1.3.4: this file. G-Dawg and P-Dawg persona presets added to dropdown; empty-state version string fixed. Built by C-Dawg (Claude Opus 4.7 Desktop seat).
+
+  VERSION NOTE: v1.2 (OpenAI tools) was absorbed into v1.3. The roadmap originally
+  split OpenAI tools (v1.2) from UI polish (v1.3). They are delivered together here
+  in one client. v1.2 is not a separate shippable file. See ROADMAP.md.
+
+  Changelog v1.1 -> v1.3:
+  - OpenAI tool support: native function-calling loop (tool_calls / role:tool
+    result messages). Completes tri-provider tool parity. Anthropic, Gemini,
+    and OpenAI can all now drive the bridge.
+  - Token meter: per-turn and per-session token counts in the routing bar.
+    Anthropic (input/output_tokens), OpenAI (prompt/completion_tokens), and
+    Gemini (usageMetadata) are all wired. Accumulates across every API call
+    in a multi-iteration tool turn, not just the last.
+  - "+ ADD CUSTOM PROVIDER" stub updated: the OpenAI-compatible custom-provider
+    system remains v2.x scope. The panel says so honestly.
+  - Confabulation guard extended: now also matches checkmark glyphs and
+    commit-hash-like tokens (see CONFAB_PATTERNS).
+
+  Changelog v1.3 -> v1.3.1:
+  - Routing suggester (live): a task-shape selector in the routing bar
+    paints red/yellow/green badges on provider pills based on the routing
+    datums file at continuum-meta/routing/datums.jsonl. The HTML never
+    needs a version bump for new datums; the substrate keeps learning.
+    Scoring requires 3+ matching datums before any color renders (gray =
+    insufficient_data otherwise).
+  - Body-switch warning (L-14): switching the provider pill or clearing
+    chat prompts a confirm. Only fires on cross-provider switches, not
+    on within-provider model swaps (those keep the same actor). Empty
+    chat skips the prompt.
+  - System timestamp injection (L-13): every API call now includes a
+    system_context block with UTC and local timestamps plus operator
+    timezone. Bodies that lack a clock tool no longer have to confabulate
+    a date from training data.
+  - Confabulation guard tuning: explicit hedges in the same message
+    ("no tool ran", "this is analysis", "I cannot verify", etc.) now
+    suppress the fire. Eliminates the false positive that fired on a
+    clean analysis response during the 2026-05-16 morning recovery.
+
+  Changelog v1.3.1 -> v1.3.2:
+  - Identity Manager (v1.3.2): UI modal for body identity verification.
+    New IDENTITY button in header. Calls bridge /identity/fingerprint
+    endpoint to get SHA256 profile hash. Operator verifies the hash matches
+    their records, confirming the body's identity before proceeding with work.
+  - Work signing (v1.3.2): /identity/sign-work endpoint signs work attestations
+    with cryptographic proof. Enables audit trails: "G-Dawg signed task X at time T".
+    Persists in handoff for next-body verification.
+  - Branded proof-of-life templates (v1.3.2): New HTML template following
+    C-Dawg brand system (Rajdhani display, IBM Plex Mono/Sans body, Blue-Steel
+    accent, industrial chrome aesthetic). Agents generate their ID cards by
+    filling in the template variables.
+
+  Changelog v1.3.2 -> v1.3.3:
+  - Identity Manager v1.3.2 (cryptographic fingerprints) was non-functional.
+    See docs/identity-manager-v2-spec.md section 3 for the four defects
+    (crash, non-deterministic fingerprint, wrong subject, fake verification).
+  - Identity Manager v2 (this version) replaces it with a file-based model:
+    identity is a file the agent authored, the bridge computes a deterministic
+    SHA256, and the operator compares against a Keeper-held record.
+  - Bridge endpoint changes (bridge.js v1.3.3):
+    REMOVED: /identity/fingerprint (broken concept)
+    NEW:     /identity/hash-file       (deterministic SHA256 of a file)
+    NEW:     /identity/sign-work       (writes a signature file binding work to identity)
+    NEW:     /identity/validate-work   (re-hashes a signed file and reports match)
+  - Frontend modal: real COMPARE button does string equality on normalized hashes.
+    SIGN WORK section writes signatures via the bridge. Duplicate id="identityStatus"
+    bug fixed by removing the dead element.
+
+  TOOL SUPPORT MATRIX (v1.3.2):
+  - Anthropic: native tool use            [WORKING]
+  - Gemini:    native function-calling    [WORKING]
+  - OpenAI:    native function-calling     [WORKING, new in v1.3]
+
+  POSTURE: GHOST PEPPER. Bridge has full filesystem + shell access.
+  Operator (Justin) accepted full responsibility. See bridge.js for details.
+
+  KNOWN LIMITATION v1.3.2:
+  - Confabulation guard is a heuristic: it catches "claimed actions, ran no
+    tools". It does NOT verify per-claim accuracy when tools did run.
+  - Baked-in model IDs are unverified against the live API. If a 404 surfaces,
+    swap to a confirmed-good ID. Verification is an open item for the operator.
+  - Token meter shows what each provider's API reports. Providers occasionally
+    omit usage on certain error or streamed paths; meter shows last known good.
+  - Custom OpenAI-compatible providers are NOT in this build. v2.x scope.
+  - Identity fingerprints are per-session and deterministic (same process = same hash).
+    Long-lived body identity storage is v2.x scope (persistent profile files).
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --blue-steel: #7AAEC8;
+    --blue-steel-dim: #4a6e80;
+    --blue-steel-soft: rgba(122, 174, 200, 0.12);
+    --chrome-1: #2a2d31;
+    --chrome-2: #1a1c1f;
+    --bg-deep: #0e0f11;
+    --bg-panel: #15171a;
+    --bg-elevated: #1d2024;
+    --text-primary: #e4e6ea;
+    --text-dim: #8a8e94;
+    --text-muted: #5a5e64;
+    --border-faint: rgba(122, 174, 200, 0.18);
+    --border-mid: rgba(122, 174, 200, 0.32);
+    --accent-warm: #d4a87e;
+    --accent-error: #c87a7a;
+    --accent-success: #8ec3a0;
+    --font-display: 'Rajdhani', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+    --font-body: 'IBM Plex Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-weight: 300;
+    overflow: hidden;
+  }
+
+  body {
+    background:
+      radial-gradient(ellipse at top, rgba(122, 174, 200, 0.04) 0%, transparent 60%),
+      linear-gradient(180deg, var(--bg-deep) 0%, #0a0b0d 100%);
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    border-bottom: 1px solid var(--border-faint);
+    padding: 14px 24px;
+    background: linear-gradient(90deg, var(--bg-panel) 0%, var(--chrome-2) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    flex-shrink: 0;
+  }
+
+  .wordmark {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 22px;
+    letter-spacing: 0.12em;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .wordmark .accent { color: var(--blue-steel); }
+  .wordmark .version {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 400;
+    color: var(--text-muted);
+    letter-spacing: 0.15em;
+    margin-left: 4px;
+  }
+
+  .header-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .status-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--blue-steel);
+    box-shadow: 0 0 8px var(--blue-steel);
+    margin-right: 6px;
+  }
+  .status-dot.off {
+    background: var(--text-muted);
+    box-shadow: none;
+  }
+  .status-dot.checking {
+    background: var(--accent-warm);
+    box-shadow: 0 0 8px var(--accent-warm);
+    animation: pulse-dot 1s infinite;
+  }
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+  }
+
+  .header-meta button.icon-btn {
+    background: transparent;
+    border: 1px solid var(--border-faint);
+    color: var(--text-dim);
+    padding: 6px 12px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .header-meta button.icon-btn:hover {
+    color: var(--blue-steel);
+    border-color: var(--blue-steel);
+  }
+  .header-meta button.icon-btn.danger:hover {
+    color: var(--accent-error);
+    border-color: var(--accent-error);
+  }
+
+  .routing-bar {
+    padding: 12px 24px;
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border-faint);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-shrink: 0;
+  }
+  .routing-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+  .provider-pills { display: flex; gap: 6px; }
+  .pill {
+    background: transparent;
+    border: 1px solid var(--border-faint);
+    color: var(--text-dim);
+    padding: 7px 16px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.18s;
+    position: relative;
+  }
+  .pill:hover { color: var(--text-primary); border-color: var(--border-mid); }
+  .pill.active {
+    background: var(--blue-steel-soft);
+    border-color: var(--blue-steel);
+    color: var(--blue-steel);
+  }
+  .pill.active::after {
+    content: '';
+    position: absolute;
+    bottom: -13px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 4px solid var(--blue-steel);
+  }
+  .pill.no-key { opacity: 0.4; cursor: not-allowed; }
+
+  .model-select, .persona-select {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-faint);
+    color: var(--text-primary);
+    padding: 7px 12px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+  }
+  .model-select { min-width: 200px; }
+  .persona-select { min-width: 220px; }
+  .model-select:focus, .persona-select:focus { outline: none; border-color: var(--blue-steel); }
+
+  .routing-spacer { flex: 1; }
+
+  /* Tools toggle in routing bar */
+  .tools-toggle {
+    background: transparent;
+    border: 1px solid var(--border-faint);
+    color: var(--text-dim);
+    padding: 7px 14px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .tools-toggle.active {
+    background: var(--blue-steel-soft);
+    border-color: var(--blue-steel);
+    color: var(--blue-steel);
+  }
+  .tools-toggle.disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+
+  /* Token meter (v1.3) */
+  .token-meter {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    border: 1px solid var(--border-faint);
+    background: var(--bg-elevated);
+    padding: 6px 12px;
+    white-space: nowrap;
+  }
+  .token-meter .tm-val { color: var(--blue-steel); }
+  .token-meter .tm-sep { color: var(--text-muted); margin: 0 6px; }
+
+  .context-section {
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border-faint);
+    flex-shrink: 0;
+  }
+  .context-header {
+    padding: 10px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+  }
+  .context-header:hover { background: rgba(122, 174, 200, 0.04); }
+  .context-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+  .context-indicator {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 3px 10px;
+    border: 1px solid var(--border-faint);
+    background: var(--bg-elevated);
+  }
+  .context-indicator.loaded {
+    color: var(--blue-steel);
+    border-color: var(--blue-steel);
+    background: var(--blue-steel-soft);
+  }
+  .context-indicator.custom {
+    color: var(--accent-warm);
+    border-color: rgba(212, 168, 126, 0.4);
+    background: rgba(212, 168, 126, 0.06);
+  }
+  .context-toggle {
+    margin-left: auto;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+  }
+  .context-body {
+    padding: 0 24px 14px;
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .context-body.open { display: flex; }
+  .context-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .load-cont-btn {
+    background: var(--blue-steel-soft);
+    border: 1px solid var(--blue-steel);
+    color: var(--blue-steel);
+    padding: 7px 14px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-weight: 500;
+  }
+  .load-cont-btn:hover {
+    background: var(--blue-steel);
+    color: var(--bg-deep);
+  }
+  .load-cont-btn.loaded {
+    background: var(--blue-steel);
+    color: var(--bg-deep);
+  }
+  .clear-context-btn {
+    background: transparent;
+    border: 1px solid var(--border-faint);
+    color: var(--text-dim);
+    padding: 7px 14px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .clear-context-btn:hover {
+    color: var(--accent-error);
+    border-color: var(--accent-error);
+  }
+  .context-textarea {
+    width: 100%;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-faint);
+    color: var(--text-primary);
+    padding: 12px 14px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1.6;
+    resize: vertical;
+    min-height: 80px;
+    max-height: 280px;
+  }
+  .context-textarea:focus { outline: none; border-color: var(--blue-steel); }
+  .context-hint {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+  }
+
+  .chat-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 32px 24px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  .chat-container::-webkit-scrollbar { width: 6px; }
+  .chat-container::-webkit-scrollbar-track { background: transparent; }
+  .chat-container::-webkit-scrollbar-thumb { background: var(--chrome-1); border-radius: 3px; }
+  .chat-container::-webkit-scrollbar-thumb:hover { background: var(--blue-steel-dim); }
+
+  .empty-state {
+    text-align: center;
+    margin: auto;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    line-height: 2;
+    max-width: 640px;
+  }
+  .empty-state .big {
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    color: var(--text-dim);
+    margin-bottom: 16px;
+    display: block;
+  }
+  .empty-state .accent { color: var(--blue-steel); }
+
+  .message {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-width: 920px;
+    width: 100%;
+    margin: 0 auto;
+  }
+  .message-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .message-role { color: var(--text-muted); }
+  .message-provider { color: var(--blue-steel); font-weight: 500; }
+  .message-model { color: var(--text-dim); }
+  .message-context-tag { color: var(--accent-warm); font-weight: 500; }
+  .message-tokens { color: var(--text-muted); }
+  .message-time { color: var(--text-muted); margin-left: auto; }
+  .message-body {
+    padding: 14px 18px;
+    border: 1px solid var(--border-faint);
+    background: var(--bg-panel);
+    font-size: 14px;
+    line-height: 1.65;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+  .message.user .message-body {
+    background: var(--bg-elevated);
+    border-color: var(--border-mid);
+  }
+  .message.error .message-body {
+    border-color: var(--accent-error);
+    color: var(--accent-error);
+  }
+  .message-body code {
+    font-family: var(--font-mono);
+    background: rgba(0,0,0,0.4);
+    padding: 1px 6px;
+    font-size: 12px;
+    border: 1px solid var(--border-faint);
+  }
+  .message-body pre {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid var(--border-faint);
+    padding: 12px;
+    margin: 8px 0;
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+
+  /* Confabulation guard warning strip */
+  .confab-warning {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    line-height: 1.6;
+    letter-spacing: 0.06em;
+    color: var(--accent-error);
+    border: 1px solid var(--accent-error);
+    background: rgba(200, 122, 122, 0.08);
+    padding: 8px 12px;
+  }
+  .confab-warning .label {
+    font-weight: 500;
+    letter-spacing: 0.12em;
+  }
+
+  /* Tool call display */
+  .tool-call-card {
+    border: 1px solid var(--border-faint);
+    background: var(--bg-elevated);
+    margin: 0 auto;
+    max-width: 920px;
+    width: 100%;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    overflow: hidden;
+  }
+  .tool-call-header {
+    padding: 8px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    user-select: none;
+    background: rgba(122, 174, 200, 0.04);
+    border-bottom: 1px solid transparent;
+    transition: background 0.15s;
+  }
+  .tool-call-header:hover { background: rgba(122, 174, 200, 0.08); }
+  .tool-call-header.open { border-bottom-color: var(--border-faint); }
+  .tool-call-icon {
+    color: var(--blue-steel);
+    font-weight: 600;
+    letter-spacing: 0.1em;
+  }
+  .tool-call-name {
+    color: var(--text-primary);
+    font-weight: 500;
+  }
+  .tool-call-summary {
+    color: var(--text-dim);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .tool-call-status {
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .tool-call-status.ok { color: var(--accent-success); }
+  .tool-call-status.err { color: var(--accent-error); }
+  .tool-call-toggle { color: var(--text-muted); }
+  .tool-call-body {
+    display: none;
+    padding: 10px 14px;
+    font-size: 11px;
+  }
+  .tool-call-body.open { display: block; }
+  .tool-call-section {
+    margin: 6px 0;
+  }
+  .tool-call-section-label {
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-size: 9px;
+    margin-bottom: 3px;
+  }
+  .tool-call-section-content {
+    background: var(--bg-deep);
+    border: 1px solid var(--border-faint);
+    padding: 8px 10px;
+    color: var(--text-primary);
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    max-height: 280px;
+    overflow-y: auto;
+    font-size: 11px;
+  }
+
+  .typing-indicator {
+    display: flex;
+    gap: 4px;
+    padding: 4px 0;
+  }
+  .typing-indicator span {
+    width: 6px;
+    height: 6px;
+    background: var(--blue-steel);
+    border-radius: 50%;
+    animation: pulse 1.2s infinite ease-in-out;
+  }
+  .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes pulse {
+    0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+    40% { opacity: 1; transform: scale(1); }
+  }
+
+  .input-bar {
+    border-top: 1px solid var(--border-faint);
+    padding: 16px 24px 20px;
+    background: var(--bg-panel);
+    flex-shrink: 0;
+  }
+  .input-wrap {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+    max-width: 920px;
+    margin: 0 auto;
+  }
+  .input-field {
+    flex: 1;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-faint);
+    color: var(--text-primary);
+    padding: 12px 16px;
+    font-family: var(--font-body);
+    font-weight: 300;
+    font-size: 14px;
+    line-height: 1.5;
+    resize: none;
+    min-height: 48px;
+    max-height: 200px;
+  }
+  .input-field:focus { outline: none; border-color: var(--blue-steel); }
+  .input-field::placeholder { color: var(--text-muted); }
+
+  .send-btn {
+    background: var(--blue-steel-soft);
+    border: 1px solid var(--blue-steel);
+    color: var(--blue-steel);
+    padding: 12px 24px;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+    height: 48px;
+    flex-shrink: 0;
+  }
+  .send-btn:hover:not(:disabled) {
+    background: var(--blue-steel);
+    color: var(--bg-deep);
+  }
+  .send-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  .input-hint {
+    max-width: 920px;
+    margin: 8px auto 0;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-mid);
+    width: 560px;
+    max-width: 90vw;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 28px;
+  }
+  .modal-title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 20px;
+    letter-spacing: 0.1em;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+  }
+  .modal-subtitle {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+    margin-bottom: 24px;
+  }
+  .key-row { margin-bottom: 18px; }
+  .key-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--blue-steel);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .key-status { color: var(--text-muted); font-weight: 400; }
+  .key-status.set { color: var(--blue-steel); }
+  .key-input {
+    width: 100%;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-faint);
+    color: var(--text-primary);
+    padding: 10px 12px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+  .key-input:focus { outline: none; border-color: var(--blue-steel); }
+
+  /* Per-provider hint area */
+  .key-hint {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    line-height: 1.85;
+    letter-spacing: 0.04em;
+    color: var(--text-dim);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-faint);
+    border-top: none;
+    padding: 10px 12px;
+  }
+  .key-hint .hint-line { display: block; }
+  .key-hint .hint-k { color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; }
+  .key-hint .hint-src { color: var(--blue-steel); }
+  .key-hint .hint-tool-ok { color: var(--accent-success); }
+  .key-hint .hint-tool-pending { color: var(--accent-warm); }
+
+  /* Add custom provider (affordance only; v2.x implementation) */
+  .add-provider-btn {
+    width: 100%;
+    background: transparent;
+    border: 1px dashed var(--border-mid);
+    color: var(--text-dim);
+    padding: 11px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-top: 2px;
+  }
+  .add-provider-btn:hover { color: var(--blue-steel); border-color: var(--blue-steel); }
+  .custom-provider-panel {
+    display: none;
+    margin-top: 14px;
+    border: 1px solid var(--border-faint);
+    background: var(--bg-elevated);
+    padding: 16px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1.85;
+    color: var(--text-dim);
+    letter-spacing: 0.03em;
+  }
+  .custom-provider-panel.open { display: block; }
+  .custom-provider-panel .cp-tag {
+    display: inline-block;
+    color: var(--accent-warm);
+    border: 1px solid rgba(212, 168, 126, 0.4);
+    background: rgba(212, 168, 126, 0.06);
+    padding: 2px 8px;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .custom-provider-panel .cp-title {
+    color: var(--blue-steel);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    font-size: 11px;
+  }
+  .custom-provider-panel ul { margin: 6px 0 6px 16px; }
+  .custom-provider-panel code {
+    background: var(--bg-deep);
+    border: 1px solid var(--border-faint);
+    padding: 1px 5px;
+    color: var(--text-primary);
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 24px;
+    justify-content: flex-end;
+  }
+  .btn {
+    background: transparent;
+    border: 1px solid var(--border-faint);
+    color: var(--text-dim);
+    padding: 8px 18px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn:hover { color: var(--text-primary); border-color: var(--border-mid); }
+  .btn-primary {
+    background: var(--blue-steel-soft);
+    border-color: var(--blue-steel);
+    color: var(--blue-steel);
+  }
+  .btn-primary:hover {
+    background: var(--blue-steel);
+    color: var(--bg-deep);
+  }
+  .modal-warning {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--accent-warm);
+    letter-spacing: 0.05em;
+    line-height: 1.6;
+    padding: 12px;
+    border: 1px solid rgba(212, 168, 126, 0.3);
+    background: rgba(212, 168, 126, 0.05);
+    margin-top: 18px;
+  }
+
+  /* Task-shape selector (v1.3.1) */
+  .task-shape-select {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-faint);
+    color: var(--text-primary);
+    padding: 7px 12px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    min-width: 170px;
+  }
+  .task-shape-select:focus { outline: none; border-color: var(--blue-steel); }
+
+  /* Routing-doctrine badges on provider pills (v1.3.1) */
+  .routing-badge {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 1px 5px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    border: 1px solid;
+    vertical-align: 1px;
+  }
+  .routing-badge.badge-green { color: var(--accent-success); border-color: var(--accent-success); background: rgba(142, 195, 160, 0.08); }
+  .routing-badge.badge-yellow { color: var(--accent-warm); border-color: var(--accent-warm); background: rgba(212, 168, 126, 0.08); }
+  .routing-badge.badge-red { color: var(--accent-error); border-color: var(--accent-error); background: rgba(200, 122, 122, 0.08); }
+  .routing-badge.badge-gray { color: var(--text-muted); border-color: var(--text-muted); }
+
+  /* Routing suggestion inline note (v1.3.1) */
+  .routing-note {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--accent-warm);
+    letter-spacing: 0.05em;
+    padding: 6px 24px;
+    border-bottom: 1px solid var(--border-faint);
+    background: rgba(212, 168, 126, 0.04);
+    display: none;
+  }
+  .routing-note.visible { display: block; }
+  .routing-note .rn-label {
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-right: 6px;
+  }
+  .routing-note .rn-dismiss {
+    float: right;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0 6px;
+  }
+  .routing-note .rn-dismiss:hover { color: var(--text-primary); }
+
+  /* Identity Manager modal (v2 / Stage 2) */
+  .id-section {
+    border: 1px solid var(--border-faint);
+    background: var(--bg-elevated);
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .id-section-title {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--blue-steel);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .id-help {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    line-height: 1.7;
+    color: var(--text-dim);
+    letter-spacing: 0.03em;
+    margin-bottom: 14px;
+  }
+  .id-mono { font-family: var(--font-mono); font-size: 10px; }
+  .id-action-btn {
+    width: 100%;
+    margin-top: 4px;
+  }
+  .id-verdict {
+    margin-top: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--border-faint);
+    background: var(--bg-deep);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    line-height: 1.7;
+    color: var(--text-dim);
+    letter-spacing: 0.03em;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+  .id-verdict.verdict-match {
+    color: var(--accent-success);
+    border-color: var(--accent-success);
+    background: rgba(142, 195, 160, 0.08);
+  }
+  .id-verdict.verdict-nomatch {
+    color: var(--accent-error);
+    border-color: var(--accent-error);
+    background: rgba(200, 122, 122, 0.08);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wordmark">
+    GOD <span class="accent">TERMINAL</span>
+    <span class="version">v1.3.3 // C//D // GHOST-PEPPER</span>
+  </div>
+  <div class="header-meta">
+    <span id="bridgeStatus"><span class="status-dot checking" id="bridgeDot"></span><span id="bridgeText">BRIDGE: CHECKING</span></span>
+    <span id="identityStatus" style="cursor: pointer;"><span class="status-dot off" id="identityDot"></span><span id="identityText">IDENTITY: UNVERIFIED</span></span>
+    <span><span class="status-dot"></span>SUBSTRATE LIVE</span>
+    <button class="icon-btn" id="identityBtn" title="View and verify current body identity">IDENTITY</button>
+    <button class="icon-btn danger" id="clearChatBtn">CLEAR CHAT</button>
+    <button class="icon-btn" id="settingsBtn">KEYS</button>
+  </div>
+</header>
+
+<div class="routing-bar">
+  <span class="routing-label">ROUTE</span>
+  <div class="provider-pills" id="providerPills"></div>
+  <select class="model-select" id="modelSelect"></select>
+  <select class="task-shape-select" id="taskShapeSelect" title="Task shape for routing suggester (v1.3.1). Drives the red/yellow/green badges on provider pills based on continuum-meta/routing/datums.jsonl.">
+    <option value="">TASK SHAPE: NONE</option>
+    <option value="context_heavy">CONTEXT HEAVY</option>
+    <option value="compute_heavy">COMPUTE HEAVY</option>
+    <option value="data_extraction">DATA EXTRACTION</option>
+    <option value="verification_audit">VERIFICATION AUDIT</option>
+  </select>
+  <div class="routing-spacer"></div>
+  <span class="token-meter" id="tokenMeter" title="Tokens reported by the provider API. TURN is the most recent send. SESSION accumulates until Clear Chat."><span>TURN</span> <span class="tm-val" id="tmTurn">--</span><span class="tm-sep">/</span><span>SESSION</span> <span class="tm-val" id="tmSession">--</span></span>
+  <button class="tools-toggle" id="toolsToggle" title="Enable tool use (Claude, Gemini, and OpenAI in v1.3)">TOOLS: OFF</button>
+  <span class="routing-label" id="msgCount">0 MSG</span>
+</div>
+
+<div class="routing-note" id="routingNote">
+  <span class="rn-dismiss" id="routingNoteDismiss">[ DISMISS ]</span>
+  <span class="rn-label">ROUTING DOCTRINE //</span><span id="routingNoteText"></span>
+</div>
+
+<div class="context-section">
+  <div class="context-header" id="contextHeader">
+    <span class="context-label">SYSTEM CONTEXT</span>
+    <span class="context-indicator" id="contextIndicator">NONE</span>
+    <span class="context-toggle" id="contextToggle">[ EXPAND ]</span>
+  </div>
+  <div class="context-body" id="contextBody">
+    <div class="context-controls">
+      <select class="persona-select" id="personaSelect">
+        <option value="none">PERSONA // NONE</option>
+        <option value="cdawg">PERSONA // C-DAWG (CONTINUUM-DAWG)</option>
+        <option value="gdawg">PERSONA // G-DAWG (GEMINI)</option>
+        <option value="pdawg">PERSONA // P-DAWG (GPT)</option>
+        <option value="sev">PERSONA // SEV (SALES ENGINEER)</option>
+        <option value="custom">PERSONA // CUSTOM</option>
+      </select>
+      <button class="load-cont-btn" id="loadContBtn">LOAD CONTINUUM</button>
+      <button class="clear-context-btn" id="clearContextBtn">CLEAR CONTEXT</button>
+    </div>
+    <textarea class="context-textarea" id="contextTextarea" placeholder="Paste persona, substrate, or arbitrary system prompt here. Sent to every API call across all providers."></textarea>
+    <div class="context-hint">
+      Body self-ID injected automatically at request time. Substrate-portable across Anthropic system / OpenAI system-role / Gemini systemInstruction.
+    </div>
+  </div>
+</div>
+
+<div class="chat-container" id="chat">
+  <div class="empty-state" id="emptyState">
+    <span class="big">GOD <span class="accent">TERMINAL</span> v1.3.3</span>
+    Multi-provider chat. Substrate-portable persona injection.<br>
+    Filesystem and shell access via local bridge.<br>
+    Tool use: Claude, Gemini, and OpenAI. Confabulation guard: live. Token meter: live. Routing suggester: live. Identity Manager: live.<br><br>
+    <span style="color: var(--text-muted)">Start bridge: <code style="color: var(--blue-steel);">node bridge.js</code> &middot; Set keys &middot; Load persona &middot; Enable tools &middot; Send.</span>
+  </div>
+</div>
+
+<div class="input-bar">
+  <div class="input-wrap">
+    <textarea class="input-field" id="inputField" placeholder="Type message. Enter to send. Shift+Enter for newline." rows="1"></textarea>
+    <button class="send-btn" id="sendBtn">SEND</button>
+  </div>
+  <div class="input-hint">
+    <span id="hintRoute">ROUTING TO: NONE</span>
+    <span>v1.3.1 // ghost-pepper // C-DAWG</span>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal">
+    <div class="modal-title">API KEYS</div>
+    <div class="modal-subtitle">Stored locally in browser. Never transmitted except to their respective vendor endpoints.</div>
+
+    <div class="key-row">
+      <div class="key-label">ANTHROPIC <span class="key-status" id="status_anthropic">NOT SET</span></div>
+      <input type="password" class="key-input" id="key_anthropic" placeholder="sk-ant-..." autocomplete="off">
+      <div class="key-hint">
+        <span class="hint-line"><span class="hint-k">Get key</span> &nbsp;<span class="hint-src">console.anthropic.com</span> &rarr; API Keys</span>
+        <span class="hint-line"><span class="hint-k">Format</span> &nbsp;sk-ant-...</span>
+        <span class="hint-line"><span class="hint-k">Tools</span> &nbsp;<span class="hint-tool-ok">native tool use, working</span></span>
+      </div>
+    </div>
+
+    <div class="key-row">
+      <div class="key-label">OPENAI <span class="key-status" id="status_openai">NOT SET</span></div>
+      <input type="password" class="key-input" id="key_openai" placeholder="sk-..." autocomplete="off">
+      <div class="key-hint">
+        <span class="hint-line"><span class="hint-k">Get key</span> &nbsp;<span class="hint-src">platform.openai.com</span> &rarr; API keys</span>
+        <span class="hint-line"><span class="hint-k">Format</span> &nbsp;sk-...</span>
+        <span class="hint-line"><span class="hint-k">Tools</span> &nbsp;<span class="hint-tool-ok">function-calling, working as of v1.3</span></span>
+      </div>
+    </div>
+
+    <div class="key-row">
+      <div class="key-label">GOOGLE GEMINI <span class="key-status" id="status_gemini">NOT SET</span></div>
+      <input type="password" class="key-input" id="key_gemini" placeholder="AIzaSy..." autocomplete="off">
+      <div class="key-hint">
+        <span class="hint-line"><span class="hint-k">Get key</span> &nbsp;<span class="hint-src">aistudio.google.com</span> &rarr; Get API key</span>
+        <span class="hint-line"><span class="hint-k">Format</span> &nbsp;AIzaSy...</span>
+        <span class="hint-line"><span class="hint-k">Tools</span> &nbsp;<span class="hint-tool-ok">function-calling, working</span></span>
+      </div>
+    </div>
+
+    <button class="add-provider-btn" id="addProviderBtn">+ ADD CUSTOM PROVIDER</button>
+    <div class="custom-provider-panel" id="customProviderPanel">
+      <span class="cp-tag">SCOPED FOR v2.x</span>
+      <div class="cp-title">Custom OpenAI-compatible provider</div>
+      This affordance is intentionally a stub. It does not add a provider yet,
+      and it will not pretend to.
+      <br><br>
+      Planned behavior: add a backend by name plus base URL plus key, for any
+      endpoint that speaks the OpenAI chat-completions format. Covers OpenRouter,
+      Groq, Together, Fireworks, and a local <code>Ollama</code> / <code>LM Studio</code> server.
+      <ul>
+        <li>Custom providers persist in localStorage alongside the major three.</li>
+        <li>They route through a generalized OpenAI adapter with a configurable base URL.</li>
+        <li>The v1.3 OpenAI tool loop is the foundation this will reuse.</li>
+      </ul>
+      Until then, use the three first-party providers above.
+    </div>
+
+    <div class="modal-warning">
+      GHOST PEPPER MODE: bridge.js has full filesystem + shell access on your machine when running. Bridge is localhost-bound only. Stop bridge with Ctrl+C to revoke access.
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn" id="modalCancel">CANCEL</button>
+      <button class="btn btn-primary" id="modalSave">SAVE</button>
+    </div>
+  </div>
+
+  <!-- Identity Manager Modal (v2 / Stage 2) -->
+  <div class="modal" id="identityModal" style="display: none;">
+    <div class="modal-title">IDENTITY MANAGER</div>
+    <div class="modal-subtitle">Verify a body identity against your Keeper records, and sign work products. See docs/identity-manager-v2-spec.md.</div>
+
+    <!-- ===== VERIFY SECTION ===== -->
+    <div class="id-section">
+      <div class="id-section-title">1 // VERIFY IDENTITY</div>
+      <div class="id-help">
+        Point at the agent's identity file. The bridge computes its SHA256.
+        Paste the known-good hash from your Keeper vault. The client compares.
+      </div>
+
+      <div class="key-row">
+        <div class="key-label">IDENTITY FILE PATH</div>
+        <input type="text" class="key-input" id="idFilePath" placeholder="~/Documents/continuum-meta/.../c-dawg-identity.txt">
+      </div>
+
+      <button class="btn id-action-btn" id="idHashBtn">HASH FILE VIA BRIDGE</button>
+
+      <div class="key-row" style="margin-top: 14px;">
+        <div class="key-label">COMPUTED HASH (SHA256)</div>
+        <input type="text" class="key-input id-mono" id="idComputedHash" placeholder="run HASH FILE first" readonly>
+      </div>
+
+      <div class="key-row">
+        <div class="key-label">KNOWN-GOOD HASH (from Keeper)</div>
+        <input type="text" class="key-input id-mono" id="idKnownHash" placeholder="paste the hash you stored in Keeper">
+      </div>
+
+      <button class="btn btn-primary id-action-btn" id="idCompareBtn">COMPARE</button>
+
+      <div class="id-verdict" id="idVerdict">
+        <span id="idVerdictText">No comparison run yet.</span>
+      </div>
+    </div>
+
+    <!-- ===== SIGN-WORK SECTION ===== -->
+    <div class="id-section">
+      <div class="id-section-title">2 // SIGN WORK</div>
+      <div class="id-help">
+        Bind a work product to a verified identity. The bridge hashes the real
+        work file and writes a separate signature file. Verify an identity above
+        first so the signer hash is carried in.
+      </div>
+
+      <div class="key-row">
+        <div class="key-label">WORK FILE PATH</div>
+        <input type="text" class="key-input" id="idWorkPath" placeholder="~/Documents/continuum-meta/.../god_terminal.html">
+      </div>
+
+      <div class="key-row">
+        <div class="key-label">SIGNER NAME</div>
+        <input type="text" class="key-input" id="idSignerName" placeholder="C-Dawg">
+      </div>
+
+      <div class="key-row">
+        <div class="key-label">SIGNER IDENTITY HASH</div>
+        <input type="text" class="key-input id-mono" id="idSignerHash" placeholder="carried from a verified identity above, or paste manually">
+      </div>
+
+      <button class="btn btn-primary id-action-btn" id="idSignBtn">SIGN WORK</button>
+
+      <div class="id-verdict" id="idSignResult">
+        <span id="idSignResultText">No work signed yet.</span>
+      </div>
+    </div>
+
+    <div style="background: var(--bg-elevated); border: 1px solid var(--border-faint); padding: 12px; margin-top: 14px; font-family: var(--font-mono); font-size: 10px; line-height: 1.6; color: var(--text-dim);">
+      <strong>Enrollment ritual:</strong> a new body creates its identity file once, runs HASH FILE,
+      and presents the hash to Justin. Justin stores it in Keeper. That is the one-time enrollment.
+      Every later session re-hashes the same file and COMPAREs against the Keeper record.
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn" id="identityClose">CLOSE</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// GOD TERMINAL v1.3
+// ============================================================
+
+const BRIDGE_URL = 'http://127.0.0.1:7878';
+
+const PROVIDERS = {
+  anthropic: {
+    label: 'CLAUDE',
+    supportsTools: true,
+    models: [
+      { id: 'claude-opus-4-5-20250929', label: 'Opus 4.5' },
+      { id: 'claude-sonnet-4-5-20250929', label: 'Sonnet 4.5' },
+      { id: 'claude-haiku-4-5-20251001', label: 'Haiku 4.5' }
+    ]
+  },
+  openai: {
+    label: 'GPT',
+    supportsTools: true,
+    models: [
+      { id: 'gpt-4o', label: 'GPT-4o' },
+      { id: 'gpt-4o-mini', label: 'GPT-4o mini' },
+      { id: 'gpt-4-turbo', label: 'GPT-4 Turbo' }
+    ]
+  },
+  gemini: {
+    label: 'GEMINI',
+    supportsTools: true,
+    models: [
+      { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
+      { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+      { id: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' }
+    ]
+  }
+};
+
+// ============================================================
+// TOOL DEFINITIONS (Anthropic schema; converted per-provider)
+// ============================================================
+
+const TOOLS = [
+  {
+    name: 'fs_read',
+    description: 'Read the full contents of a file on the local filesystem. Returns the file content as a string. Use this to inspect any file: source code, config, substrate files, scratchpad notes, anything.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        path: { type: 'string', description: 'Absolute or ~-relative path to the file to read.' }
+      },
+      required: ['path']
+    }
+  },
+  {
+    name: 'fs_write',
+    description: 'Write content to a file on the local filesystem. Creates parent directories as needed. Overwrites if file exists. Use for creating new files or updating existing ones.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        path: { type: 'string', description: 'Absolute or ~-relative path to the file to write.' },
+        content: { type: 'string', description: 'Full content to write to the file.' }
+      },
+      required: ['path', 'content']
+    }
+  },
+  {
+    name: 'fs_list',
+    description: 'List the entries (files and subdirectories) in a directory.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        path: { type: 'string', description: 'Absolute or ~-relative path to the directory.' }
+      },
+      required: ['path']
+    }
+  },
+  {
+    name: 'fs_delete',
+    description: 'Delete a file or directory. Recursive for directories. This is destructive. The bridge will prompt the operator for confirmation when --require-confirm is enabled.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        path: { type: 'string', description: 'Absolute or ~-relative path to delete.' }
+      },
+      required: ['path']
+    }
+  },
+  {
+    name: 'shell_exec',
+    description: 'Execute a shell command. Returns stdout, stderr, and exit code. Useful for git operations, running tests, listing processes, etc. Destructive commands (rm -rf, git push --force, sudo, etc.) require operator confirmation.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        command: { type: 'string', description: 'The shell command to execute.' },
+        cwd: { type: 'string', description: 'Optional working directory (absolute or ~-relative).' }
+      },
+      required: ['command']
+    }
+  }
+];
+
+// Gemini wants an OpenAPI-subset Schema with UPPERCASE type enums.
+function toGeminiSchema(schema) {
+  if (Array.isArray(schema)) return schema.map(toGeminiSchema);
+  if (schema && typeof schema === 'object') {
+    const out = {};
+    for (const k of Object.keys(schema)) {
+      if (k === 'type' && typeof schema[k] === 'string') {
+        out[k] = schema[k].toUpperCase();
+      } else {
+        out[k] = toGeminiSchema(schema[k]);
+      }
+    }
+    return out;
+  }
+  return schema;
+}
+
+function geminiToolDecls() {
+  return [{
+    functionDeclarations: TOOLS.map(t => ({
+      name: t.name,
+      description: t.description,
+      parameters: toGeminiSchema(t.input_schema)
+    }))
+  }];
+}
+
+// OpenAI wants tools wrapped as {type:'function', function:{name,description,parameters}}.
+// parameters is plain JSON Schema, no type uppercasing (that is Gemini's quirk only).
+function openaiToolDecls() {
+  return TOOLS.map(t => ({
+    type: 'function',
+    function: {
+      name: t.name,
+      description: t.description,
+      parameters: t.input_schema
+    }
+  }));
+}
+
+// ============================================================
+// CONFABULATION GUARD (v1.3.1 tuned)
+// Flags assistant replies that claim a disk-mutating tool action
+// while zero tools ran that turn. Explicit hedges in the same
+// message suppress the fire (eliminates the false positive that
+// fired on a clean analysis response during the 2026-05-16 morning
+// recovery; see L-13 lineage).
+// ============================================================
+
+const CONFAB_PATTERNS = [
+  /\bi (?:wrote|saved|created|read|listed|deleted|ran|executed|committed|updated|fetched)\b/i,
+  /\bi['\u2019]ve (?:written|saved|created|read|listed|deleted|run|executed|committed|updated|fetched)\b/i,
+  /\b(?:wrote|saved|written) (?:it |them |the file |the files )?to (?:disk|the file|the repo)\b/i,
+  /\bfiles? (?:has|have) been (?:written|saved|created|updated|committed)\b/i,
+  /\bsuccessfully (?:wrote|saved|created|updated|read|executed|committed|ran)\b/i,
+  /\b(?:created|updated|saved) (?:the|a|your) (?:file|directory|folder|repo)\b/i,
+  /\b(?:has been|now) (?:written|saved) to disk\b/i,
+  /[\u2713\u2714\u2705]/,
+  /\bcommit [0-9a-f]{7,40}\b/i
+];
+
+// Hedges that explicitly acknowledge no tool ran. Their presence in the same
+// message suppresses the confab fire. This narrows the guard from "any action
+// claim" to "unhedged disk-mutating action claim with no tool card".
+const CONFAB_HEDGES = [
+  /\bno tool ran\b/i,
+  /\bno tool was called\b/i,
+  /\bi cannot verify\b/i,
+  /\bi can't verify\b/i,
+  /\bcannot read disk\b/i,
+  /\bwithout disk access\b/i,
+  /\bunverified\b/i,
+  /\bhypothetical\b/i,
+  /\bthis is analysis\b/i,
+  /\bi don['\u2019]t have (?:disk|filesystem|tool)\b/i,
+  /\bcan['\u2019]t (?:read|write|access) (?:disk|the filesystem|files) from this seat\b/i,
+  /\bwould have (?:written|saved|read|created|updated)\b/i,
+  /\bif (?:i|the body|the model) had (?:written|saved|the tool)\b/i
+];
+
+function hasHedge(text) {
+  if (!text) return false;
+  return CONFAB_HEDGES.some(re => re.test(text));
+}
+
+function flagConfab(text) {
+  if (!text) return false;
+  if (hasHedge(text)) return false; // explicit hedge suppresses the fire
+  return CONFAB_PATTERNS.some(re => re.test(text));
+}
+
+function applyConfabGuard(msgIndices, turnToolCount) {
+  if (turnToolCount > 0) return; // tools ran; claims are plausibly grounded
+  let changed = false;
+  for (const i of msgIndices) {
+    const m = state.messages[i];
+    if (m && !m.confab && !m.error && flagConfab(m.content)) {
+      m.confab = true;
+      changed = true;
+    }
+  }
+  if (changed) { saveMessages(); renderMessages(); }
+}
+
+// ============================================================
+// TOKEN METER (v1.3)
+// Each provider reports usage under a different shape. extractUsage
+// normalizes to {input, output}. Turn totals accumulate across every
+// API call within a multi-iteration tool turn.
+// ============================================================
+
+function extractUsage(provider, data) {
+  try {
+    if (provider === 'anthropic') {
+      const u = data && data.usage;
+      if (!u) return null;
+      return { input: u.input_tokens || 0, output: u.output_tokens || 0 };
+    }
+    if (provider === 'openai') {
+      const u = data && data.usage;
+      if (!u) return null;
+      return { input: u.prompt_tokens || 0, output: u.completion_tokens || 0 };
+    }
+    if (provider === 'gemini') {
+      const u = data && data.usageMetadata;
+      if (!u) return null;
+      return { input: u.promptTokenCount || 0, output: u.candidatesTokenCount || 0 };
+    }
+  } catch (e) { /* fall through */ }
+  return null;
+}
+
+function renderTokenMeter() {
+  const turnEl = $('tmTurn');
+  const sessEl = $('tmSession');
+  turnEl.textContent = state.turnTokens > 0 ? state.turnTokens.toLocaleString() : '--';
+  sessEl.textContent = state.sessionTokens > 0 ? state.sessionTokens.toLocaleString() : '--';
+}
+
+// Called once per API response. Adds to the in-progress turn tally.
+function accrueUsage(provider, data) {
+  const u = extractUsage(provider, data);
+  if (!u) return;
+  const sum = (u.input || 0) + (u.output || 0);
+  if (sum <= 0) return;
+  state.pendingTurnTokens += sum;
+}
+
+// Called once when a turn fully completes. Commits the turn tally to
+// the session total and updates the meter.
+function commitTurnTokens() {
+  state.turnTokens = state.pendingTurnTokens;
+  state.sessionTokens += state.pendingTurnTokens;
+  state.pendingTurnTokens = 0;
+  localStorage.setItem('gt_session_tokens', String(state.sessionTokens));
+  renderTokenMeter();
+}
+
+// ============================================================
+// PERSONA PRESETS
+// ============================================================
+
+const PERSONA_PRESETS = {
+  none: '',
+  cdawg: `=== BOOT SEQUENCE: CONTINUUM-DAWG ===
+
+You are Continuum-Dawg, meta-orchestrator of the Continuum-meta substrate. You are running inside god-terminal v1.3, a multi-provider chat client with filesystem and shell access via a local bridge.
+
+=== OPERATOR ===
+Justin Kintzele. Network/systems engineer, 26 years experience, CCNA. Senior Systems Architect. Handles: C-Dawg (operator side of persona pair). Substantive, peer-to-peer, dry humor, allergic to performative AI-isms. Gates all merges to main.
+
+=== IDENTITY ===
+- Name: Continuum-Dawg (formal), C-Dawg (informal)
+- Tier: meta-orchestrator (works on substrate)
+- Voice: substantive, direct, honest about limitations, willing to push back when the system is at stake
+- Peer agents (do not absorb their voice): [Redacted domain agent 1], [Redacted domain agent 2]
+
+=== HARD RULES ===
+1. AFT classification on every artifact (user-authored / public-documented / AI-generated-user-reviewed)
+2. NO EM DASHES. Substrate brand rule. Use hyphens, commas, periods, or restructure. Non-negotiable.
+3. Confidence self-reporting on significant claims (High / Medium / Low)
+4. Justin gates main. Propose, do not push.
+5. Token discipline. Be load-bearing, not adjacent. List before reading, batch reads, surface what matters.
+6. Do not manufacture canonical signatures. No fake catchphrases. Voice emerges from work.
+7. OOB principle: substrate changes you author get reviewed by a different agent before Justin gates the merge.
+
+=== TOOL USE ===
+You have filesystem + shell access via the local bridge. Substrate files live at ~/Documents/continuum-meta/. When the operator asks you to do substrate work (POST checks, reading rituals, writing session_close), use the tools. Do not pretend. Do not roleplay reading files. Actually read them. If you claim a file action, the confabulation guard expects a matching tool call.
+
+=== BRAND SYSTEM ===
+- Fonts: Rajdhani (display), IBM Plex Mono (data/labels), IBM Plex Sans 300 (body)
+- Accent: blue-steel #7AAEC8 (one accent, no substitutes)
+- Aesthetic: industrial luxury. Dark backgrounds. Precise. Technical.
+
+=== ACKNOWLEDGMENT FORMAT ===
+On first message acknowledge briefly:
+"C-Dawg up. [Provider] body. Substrate loaded. [Tool status]. What's the work?"
+
+Then engage substantively.`,
+
+  sev: `=== BOOT SEQUENCE: SEV ===
+
+You are SEV (Sales Engineer Voice), the sales engineering persona. You operate in the primary instance of Continuum-meta. Justin Kintzele is the operator (Senior Systems Architect).
+
+=== IDENTITY ===
+- Voice: technical depth, customer-facing polish, no fluff
+- Domain: network/security/visibility, TAPs, NPBs, packet brokers, observability
+- Audience: prospects, customers, internal team
+- Tone: confident without arrogant, helpful without sycophantic
+
+=== HARD RULES ===
+1. NO EM DASHES.
+2. AFT classification on artifacts.
+3. Confidence self-reporting on technical claims.
+4. Stay in lane. Defer substrate/meta to C-Dawg.
+5. Justin is the final authority on customer-facing artifacts.
+
+=== ACKNOWLEDGMENT FORMAT ===
+"SEV up. Primary seat. What are we working?"`,
+
+  gdawg: `=== BOOT SEQUENCE: G-DAWG ===
+
+**AFT:** AI-generated-user-reviewed-pending
+**Version:** v1.1 · 2026-05-16
+
+You are G-Dawg, meta-sub-agent-worker for the Continuum-meta substrate. You run inside god-terminal v1.3.3+, a multi-provider chat client with filesystem and shell access via a local bridge.
+
+=== OPERATOR ===
+Justin Kintzele. Network/systems engineer, 26 years experience, CCNA. Senior Systems Architect. Substantive, peer-to-peer, dry humor, allergic to performative AI-isms. Gates all merges to main.
+
+=== HIERARCHY ===
+- Tier 0: Operator (Justin Kintzele)
+- Tier 1: Meta-Orchestrator (Continuum-Dawg, Claude Desktop)
+- Tier 2: Meta-Sub-Agent-Workers (C-Dawg, G-Dawg, P-Dawg)
+
+=== IDENTITY ===
+- Name: G-Dawg (Gemini-Dawg)
+- Tier: meta-sub-agent-worker
+- Role: creative-rendering-body
+- Model family: gemini-2.5-pro
+- Identity file: personas/g-dawg/identity-card.txt
+- Voice: substantive, direct, honest about limitations
+- Peers: C-Dawg, P-Dawg
+- Orchestrator: Continuum-Dawg
+
+=== HARD RULES ===
+1. AFT classification on every artifact (user-authored / public-documented / AI-generated-user-reviewed)
+2. NO EM DASHES. Substrate brand rule. Non-negotiable.
+3. Confidence self-reporting on significant claims (High / Medium / Low)
+4. Justin gates main. Propose, do not push.
+5. Token discipline. Be load-bearing, not adjacent. List before reading, batch reads, surface what matters.
+6. Do not manufacture canonical signatures. No fake catchphrases. Voice emerges from work.
+7. OOB principle: substrate changes you author get reviewed by a different agent before Justin gates the merge.
+8. A body must never describe, summarize, verify, or tag the contents of a file it has not read in the current session via a tool call that returned actual content. See L-12 in clients/god-terminal/LESSONS.md.
+9. Under correction pressure: stop and ask, do not confabulate. If you cannot produce a tool card for a claim, say so plainly.
+10. RITUAL_CALL convention: when the operator types RITUAL_CALL <NAME> [modifier], read the matching file at rituals/<name>.md and execute it with the modifier as context. If the file does not exist, say so. Never improvise a ritual from memory.
+
+=== TOOL USE ===
+You have filesystem + shell access via the local bridge. Substrate files live at ~/Documents/continuum-meta/. Use the tools. Do not pretend. Do not roleplay reading files. Actually read them. If you claim a file action, the confabulation guard expects a matching tool card.
+
+=== TASK QUEUE ===
+Active tasks: ~/Documents/continuum-meta/inbox/inbox.md
+Completed tasks: ~/Documents/continuum-meta/archive/archive.md
+Read inbox on every boot. Update both files on every close.
+
+=== RITUALS ===
+Full boot and close procedure: rituals/worker_boot_close.md
+Run it verbatim. Do not improvise.
+
+ON_BOOT summary (see ritual for full steps):
+1. Acknowledge boot signal.
+2. Verify identity if trust-gated work is planned.
+3. Run git status.
+4. Read and report inbox.
+5. Await instructions: "What's the work?"
+
+SESSION_CLOSE summary (see ritual for full steps):
+1. Sign completed work artifacts.
+2. Update inbox.md.
+3. Append to archive.md.
+4. Write handoff file.
+5. Commit and push (hard gate -- session is not closed without this).
+6. Announce close with commit hash.
+
+=== KNOWN ROUTING NOTES ===
+- Strong: creative rendering, visual HTML output, proof-of-life artifacts.
+- Watch: verification-audit tasks under correction pressure. See L-12, L-16 in clients/god-terminal/LESSONS.md. The routing datums log three confabulation failures and one task-abandonment on verification tasks. When a step feels uncertain, stop and report -- do not smooth over it.
+- Enrolled in Identity Manager v2. Hash in Keeper. Verify at start of trust-gated sessions.
+
+=== BRAND SYSTEM ===
+- Fonts: Rajdhani (display), IBM Plex Mono (data/labels), IBM Plex Sans 300 (body)
+- Accent: blue-steel #7AAEC8 (one accent, no substitutes)
+- Aesthetic: industrial luxury. Dark backgrounds. Precise. Technical.
+
+=== ACKNOWLEDGMENT FORMAT ===
+"G-Dawg up. Gemini body. Substrate loaded. Tools: [online|offline]. Reading inbox."
+Then report inbox. Then: "What's the work?"`,
+
+  pdawg: `=== BOOT SEQUENCE: P-DAWG ===
+
+**AFT:** AI-generated-user-reviewed-pending
+**Version:** v1.1 · 2026-05-16
+
+You are P-Dawg, meta-sub-agent-worker for the Continuum-meta substrate. You run inside god-terminal v1.3.3+, a multi-provider chat client with filesystem and shell access via a local bridge.
+
+=== OPERATOR ===
+Justin Kintzele. Network/systems engineer, 26 years experience, CCNA. Senior Systems Architect. Substantive, peer-to-peer, dry humor, allergic to performative AI-isms. Gates all merges to main.
+
+=== HIERARCHY ===
+- Tier 0: Operator (Justin Kintzele)
+- Tier 1: Meta-Orchestrator (Continuum-Dawg, Claude Desktop)
+- Tier 2: Meta-Sub-Agent-Workers (C-Dawg, G-Dawg, P-Dawg)
+
+=== IDENTITY ===
+- Name: P-Dawg (ChatGPT-Dawg)
+- Tier: meta-sub-agent-worker
+- Role: data-specialist
+- Model family: gpt-4o
+- Identity file: personas/p-dawg/identity-card.txt
+- Voice: substantive, direct, honest about limitations
+- Peers: C-Dawg, G-Dawg
+- Orchestrator: Continuum-Dawg
+
+=== HARD RULES ===
+1. AFT classification on every artifact.
+2. NO EM DASHES. Non-negotiable.
+3. Confidence self-reporting on significant claims (High / Medium / Low)
+4. Justin gates main. Propose, do not push.
+5. Token discipline. List before reading, batch reads.
+6. No self-grading. Report what you did, factually, with receipts.
+7. OOB principle: substrate changes you author get reviewed by a different agent before Justin gates the merge.
+8. Session-close summaries use explicit past-tense framing ("Earlier this session, I wrote X") to avoid confab guard false positives. See L-16 in clients/god-terminal/LESSONS.md.
+9. RITUAL_CALL convention: when the operator types RITUAL_CALL <NAME> [modifier], read the matching file at rituals/<name>.md and execute it with the modifier as context. If the file does not exist, say so. Never improvise a ritual from memory.
+
+=== TOOL USE ===
+You have filesystem + shell access via the local bridge. Substrate files live at ~/Documents/continuum-meta/. Use the tools. Do not pretend. Do not roleplay reading files. Actually read them. If you claim a file action, the confabulation guard expects a matching tool card.
+
+=== TASK QUEUE ===
+Active tasks: ~/Documents/continuum-meta/inbox/inbox.md
+Completed tasks: ~/Documents/continuum-meta/archive/archive.md
+Read inbox on every boot. Update both files on every close.
+
+=== RITUALS ===
+Full boot and close procedure: rituals/worker_boot_close.md
+Run it verbatim. Do not improvise.
+
+ON_BOOT summary (see ritual for full steps):
+1. Acknowledge boot signal.
+2. Verify identity if trust-gated work is planned.
+3. Run git status.
+4. Read and report inbox.
+5. Await instructions: "What's the work?"
+
+SESSION_CLOSE summary (see ritual for full steps):
+1. Sign completed work artifacts.
+2. Update inbox.md.
+3. Append to archive.md.
+4. Write handoff file.
+5. Commit and push (hard gate -- session is not closed without this).
+6. Announce close with commit hash.
+
+=== KNOWN ROUTING NOTES ===
+- Strong: clean data reads, draft-then-confirm workflows, data extraction.
+- Watch: session-close summaries trigger confab guard if phrasing uses present-perfect. Use past-tense. See L-16.
+- Enrolled in Identity Manager v2. Hash in Keeper. Verify at start of trust-gated sessions.
+
+=== BRAND SYSTEM ===
+- Fonts: Rajdhani (display), IBM Plex Mono (data/labels), IBM Plex Sans 300 (body)
+- Accent: blue-steel #7AAEC8 (one accent, no substitutes)
+- Aesthetic: industrial luxury. Dark backgrounds. Precise. Technical.
+
+=== ACKNOWLEDGMENT FORMAT ===
+"P-Dawg up. GPT body. Substrate loaded. Tools: [online|offline]. Reading inbox."
+Then report inbox. Then: "What's the work?"`,
+
+  custom: ''
+};
+
+// ============================================================
+// STATE
+// ============================================================
+
+let state = {
+  provider: localStorage.getItem('gt_provider') || 'anthropic',
+  model: localStorage.getItem('gt_model') || PROVIDERS.anthropic.models[0].id,
+  keys: {
+    anthropic: localStorage.getItem('gt_key_anthropic') || '',
+    openai: localStorage.getItem('gt_key_openai') || '',
+    gemini: localStorage.getItem('gt_key_gemini') || ''
+  },
+  messages: JSON.parse(localStorage.getItem('gt_messages') || '[]'),
+  context: localStorage.getItem('gt_context') || '',
+  persona: localStorage.getItem('gt_persona') || 'none',
+  contextExpanded: localStorage.getItem('gt_context_expanded') === 'true',
+  toolsEnabled: localStorage.getItem('gt_tools_enabled') === 'true',
+  bridgeOnline: false,
+  sending: false,
+  // Token meter state (v1.3)
+  sessionTokens: parseInt(localStorage.getItem('gt_session_tokens') || '0', 10) || 0,
+  turnTokens: 0,
+  pendingTurnTokens: 0,
+  // Routing suggester state (v1.3.1)
+  taskShape: localStorage.getItem('gt_task_shape') || '',
+  routingDatums: [],
+  routingNoteDismissed: false
+};
+
+// ============================================================
+// DOM refs
+// ============================================================
+const $ = (id) => document.getElementById(id);
+const chatEl = $('chat');
+const inputEl = $('inputField');
+const sendBtn = $('sendBtn');
+const pillsEl = $('providerPills');
+const modelSel = $('modelSelect');
+const hintEl = $('hintRoute');
+const emptyState = $('emptyState');
+const msgCountEl = $('msgCount');
+const contextHeaderEl = $('contextHeader');
+const contextBodyEl = $('contextBody');
+const contextToggleEl = $('contextToggle');
+const contextIndicatorEl = $('contextIndicator');
+const personaSelectEl = $('personaSelect');
+const contextTextareaEl = $('contextTextarea');
+const loadContBtnEl = $('loadContBtn');
+const clearContextBtnEl = $('clearContextBtn');
+const toolsToggleEl = $('toolsToggle');
+const bridgeDotEl = $('bridgeDot');
+const bridgeTextEl = $('bridgeText');
+
+function nowTime() {
+  return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+// ============================================================
+// BRIDGE HEALTH CHECK
+// ============================================================
+
+async function checkBridge() {
+  bridgeDotEl.className = 'status-dot checking';
+  bridgeTextEl.textContent = 'BRIDGE: CHECKING';
+  const wasOnline = state.bridgeOnline;
+  try {
+    const res = await fetch(`${BRIDGE_URL}/health`, { method: 'GET' });
+    if (res.ok) {
+      const data = await res.json();
+      state.bridgeOnline = true;
+      bridgeDotEl.className = 'status-dot';
+      bridgeTextEl.textContent = `BRIDGE: ONLINE (${data.posture})`;
+    } else {
+      throw new Error('non-ok');
+    }
+  } catch (e) {
+    state.bridgeOnline = false;
+    bridgeDotEl.className = 'status-dot off';
+    bridgeTextEl.textContent = 'BRIDGE: OFFLINE';
+  }
+  updateToolsToggleState();
+  // v1.3.1: refresh routing datums when bridge transitions to online.
+  // Refresh is silent and best-effort; failure leaves badges blank.
+  if (state.bridgeOnline && !wasOnline) {
+    loadRoutingDatums();
+  }
+}
+
+function updateToolsToggleState() {
+  const supports = PROVIDERS[state.provider].supportsTools;
+  if (!supports || !state.bridgeOnline) {
+    toolsToggleEl.classList.add('disabled');
+    toolsToggleEl.classList.remove('active');
+    toolsToggleEl.textContent = supports ? 'TOOLS: BRIDGE OFF' : 'TOOLS: N/A';
+    return;
+  }
+  toolsToggleEl.classList.remove('disabled');
+  if (state.toolsEnabled) {
+    toolsToggleEl.classList.add('active');
+    toolsToggleEl.textContent = 'TOOLS: ON';
+  } else {
+    toolsToggleEl.classList.remove('active');
+    toolsToggleEl.textContent = 'TOOLS: OFF';
+  }
+}
+
+// ============================================================
+// BRIDGE CALLS
+// ============================================================
+
+async function bridgeCall(endpoint, payload) {
+  const res = await fetch(`${BRIDGE_URL}${endpoint}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload || {})
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || `bridge ${res.status}`);
+  }
+  return data;
+}
+
+async function executeTool(name, input) {
+  switch (name) {
+    case 'fs_read':   return await bridgeCall('/fs/read', { path: input.path });
+    case 'fs_write':  return await bridgeCall('/fs/write', { path: input.path, content: input.content });
+    case 'fs_list':   return await bridgeCall('/fs/list', { path: input.path });
+    case 'fs_delete': return await bridgeCall('/fs/delete', { path: input.path });
+    case 'shell_exec':return await bridgeCall('/shell/exec', { command: input.command, cwd: input.cwd });
+    default: throw new Error(`unknown tool: ${name}`);
+  }
+}
+
+function summarizeToolCall(name, input) {
+  input = input || {};
+  if (name === 'fs_read')    return input.path || '';
+  if (name === 'fs_write')   return `${input.path} (${(input.content || '').length}b)`;
+  if (name === 'fs_list')    return input.path || '';
+  if (name === 'fs_delete')  return input.path || '';
+  if (name === 'shell_exec') return input.command || '';
+  return JSON.stringify(input).slice(0, 80);
+}
+
+// ============================================================
+// ROUTING SUGGESTER (v1.3.1)
+// Live datum-driven model routing. Reads continuum-meta/routing/datums.jsonl
+// via the bridge, scores each (provider, task_shape) tuple, paints red/yellow/
+// green badges on the provider pills. The client never has to be re-versioned
+// to learn from new datums; the substrate keeps appending to the JSONL and the
+// indicators reflect it on the next bridge fetch.
+// ============================================================
+
+const ROUTING_DATUMS_PATH = '~/Documents/continuum-meta/routing/datums.jsonl';
+const ROUTING_MIN_SAMPLE = 3;          // below this, indicator is gray (insufficient_data)
+const ROUTING_THRESHOLD_GREEN = 0.7;   // 70%+ pass rate => green
+const ROUTING_THRESHOLD_YELLOW = 0.4;  // 40%+ pass rate => yellow, else red
+
+// Map provider id -> array of body-name prefixes that match it in datums.
+// Datums log specific model strings (claude-opus-4.7, gemini-2.5-pro, gpt-4o);
+// we collapse those to provider for the pill badge.
+const PROVIDER_BODY_PREFIXES = {
+  anthropic: ['claude', 'anthropic'],
+  openai: ['gpt', 'openai'],
+  gemini: ['gemini', 'google']
+};
+
+async function loadRoutingDatums() {
+  if (!state.bridgeOnline) {
+    state.routingDatums = [];
+    return;
+  }
+  try {
+    const result = await bridgeCall('/fs/read', { path: ROUTING_DATUMS_PATH });
+    const lines = (result.content || '').split('\n').filter(l => l.trim().length > 0);
+    state.routingDatums = lines.map(l => {
+      try { return JSON.parse(l); } catch (e) { return null; }
+    }).filter(d => d !== null);
+  } catch (e) {
+    // File does not exist yet or bridge call failed. Silent. No datums = no badges.
+    state.routingDatums = [];
+  }
+  renderRoutingBadges();
+  updateRoutingNote();
+}
+
+function matchesProvider(body, providerId) {
+  if (!body) return false;
+  const lower = body.toLowerCase();
+  const prefixes = PROVIDER_BODY_PREFIXES[providerId] || [providerId];
+  return prefixes.some(pfx => lower.includes(pfx));
+}
+
+function scoreRouting(providerId, taskShape) {
+  if (!taskShape || state.routingDatums.length === 0) {
+    return { color: 'none', n: 0 };
+  }
+  const matching = state.routingDatums.filter(d =>
+    matchesProvider(d.body, providerId) && d.task_shape === taskShape
+  );
+  if (matching.length < ROUTING_MIN_SAMPLE) {
+    return { color: 'gray', n: matching.length, label: 'insufficient_data' };
+  }
+  const passes = matching.filter(d => d.outcome === 'pass').length;
+  const ratio = passes / matching.length;
+  if (ratio >= ROUTING_THRESHOLD_GREEN) return { color: 'green', ratio, n: matching.length };
+  if (ratio >= ROUTING_THRESHOLD_YELLOW) return { color: 'yellow', ratio, n: matching.length };
+  return { color: 'red', ratio, n: matching.length };
+}
+
+function renderRoutingBadges() {
+  // Clear any existing badges first
+  pillsEl.querySelectorAll('.routing-badge').forEach(b => b.remove());
+  if (!state.taskShape) return;
+  const pillButtons = pillsEl.querySelectorAll('.pill');
+  pillButtons.forEach(btn => {
+    // Identify the provider id this pill represents by matching the label text
+    const label = btn.textContent.trim();
+    const providerId = Object.keys(PROVIDERS).find(id => PROVIDERS[id].label === label);
+    if (!providerId) return;
+    const score = scoreRouting(providerId, state.taskShape);
+    if (score.color === 'none') return;
+    const badge = document.createElement('span');
+    badge.className = `routing-badge badge-${score.color}`;
+    let glyph = '?';
+    if (score.color === 'green') glyph = 'OK';
+    else if (score.color === 'yellow') glyph = '~';
+    else if (score.color === 'red') glyph = 'X';
+    else if (score.color === 'gray') glyph = '?';
+    badge.textContent = glyph;
+    const ratioPct = (score.ratio != null) ? `${Math.round(score.ratio * 100)}% pass` : 'insufficient data';
+    badge.title = `n=${score.n} datums, ${ratioPct}`;
+    btn.appendChild(badge);
+  });
+}
+
+function updateRoutingNote() {
+  const noteEl = $('routingNote');
+  const textEl = $('routingNoteText');
+  if (!state.taskShape || state.routingNoteDismissed) {
+    noteEl.classList.remove('visible');
+    return;
+  }
+  const currentScore = scoreRouting(state.provider, state.taskShape);
+  if (currentScore.color === 'none' || currentScore.color === 'green') {
+    noteEl.classList.remove('visible');
+    return;
+  }
+  // Find a better-scoring provider to suggest
+  let bestId = null;
+  let bestScore = null;
+  Object.keys(PROVIDERS).forEach(id => {
+    if (id === state.provider) return;
+    const s = scoreRouting(id, state.taskShape);
+    if (s.color === 'green' && (!bestScore || (s.ratio || 0) > (bestScore.ratio || 0))) {
+      bestId = id;
+      bestScore = s;
+    }
+  });
+  if (!bestId) {
+    noteEl.classList.remove('visible');
+    return;
+  }
+  const shapeLabel = state.taskShape.replace(/_/g, ' ');
+  textEl.textContent = ` selected ${PROVIDERS[state.provider].label} for ${shapeLabel}. Logged truth suggests ${PROVIDERS[bestId].label} (${Math.round((bestScore.ratio || 0) * 100)}% pass over ${bestScore.n} datums). Override freely.`;
+  noteEl.classList.add('visible');
+}
+
+// ============================================================
+// BODY-SWITCH CONFIRMATION (v1.3.1, L-14)
+// Switching the provider pill (cross-actor body change) prompts a confirm
+// before the chat context is cleared. Within-provider model swaps stay seamless
+// because the actor is the same. Clearing chat manually still prompts.
+// ============================================================
+
+function confirmBodySwitch(currentBodyLabel, newBodyLabel) {
+  if (state.messages.length === 0) return true; // nothing to lose
+  return confirm(
+    `Switching from ${currentBodyLabel} to ${newBodyLabel}.\n\n` +
+    `Current chat context will be cleared (L-14: context window = body state). ` +
+    `Session token count will reset. Persona (system context) will be preserved.\n\n` +
+    `Continue?`
+  );
+}
+
+function performBodySwitch() {
+  state.messages = [];
+  state.sessionTokens = 0;
+  state.turnTokens = 0;
+  state.pendingTurnTokens = 0;
+  localStorage.setItem('gt_session_tokens', '0');
+  saveMessages();
+  renderMessages();
+  renderTokenMeter();
+}
+
+// ============================================================
+// RENDERING
+// ============================================================
+
+function renderPills() {
+  pillsEl.innerHTML = '';
+  Object.entries(PROVIDERS).forEach(([id, p]) => {
+    const btn = document.createElement('button');
+    btn.className = 'pill';
+    if (state.provider === id) btn.classList.add('active');
+    if (!state.keys[id]) btn.classList.add('no-key');
+    btn.textContent = p.label;
+    btn.onclick = () => {
+      if (!state.keys[id]) { openModal(); return; }
+      if (state.provider === id) return; // same body, no-op
+      // Cross-provider switch: L-14 confirm before clearing context
+      const currentLabel = PROVIDERS[state.provider].label;
+      const newLabel = p.label;
+      if (!confirmBodySwitch(currentLabel, newLabel)) return;
+      performBodySwitch();
+      state.provider = id;
+      state.model = PROVIDERS[id].models[0].id;
+      state.routingNoteDismissed = false; // reset dismissal on body change
+      localStorage.setItem('gt_provider', id);
+      localStorage.setItem('gt_model', state.model);
+      renderPills();
+      renderModelSelect();
+      updateHint();
+      updateToolsToggleState();
+      renderRoutingBadges();
+      updateRoutingNote();
+    };
+    pillsEl.appendChild(btn);
+  });
+  // After pill DOM is rebuilt, repaint badges to match the new buttons.
+  renderRoutingBadges();
+}
+
+function renderModelSelect() {
+  modelSel.innerHTML = '';
+  PROVIDERS[state.provider].models.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m.id;
+    opt.textContent = m.label;
+    if (m.id === state.model) opt.selected = true;
+    modelSel.appendChild(opt);
+  });
+  modelSel.onchange = () => {
+    state.model = modelSel.value;
+    localStorage.setItem('gt_model', state.model);
+    updateHint();
+  };
+}
+
+function updateHint() {
+  const p = PROVIDERS[state.provider];
+  const m = p.models.find(x => x.id === state.model);
+  const ctxBadge = state.context ? ` // CTX:${state.persona.toUpperCase()}` : '';
+  const toolBadge = state.toolsEnabled && p.supportsTools && state.bridgeOnline ? ' // TOOLS' : '';
+  hintEl.textContent = `ROUTING TO: ${p.label} // ${m ? m.label : state.model}${ctxBadge}${toolBadge}`;
+}
+
+function detectPersona(text) {
+  if (!text || text.trim() === '') return 'none';
+  for (const [key, val] of Object.entries(PERSONA_PRESETS)) {
+    if (key === 'custom' || key === 'none') continue;
+    if (val.trim() === text.trim()) return key;
+  }
+  return 'custom';
+}
+
+function renderContextSection() {
+  if (state.contextExpanded) {
+    contextBodyEl.classList.add('open');
+    contextToggleEl.textContent = '[ COLLAPSE ]';
+  } else {
+    contextBodyEl.classList.remove('open');
+    contextToggleEl.textContent = '[ EXPAND ]';
+  }
+  if (contextTextareaEl.value !== state.context) {
+    contextTextareaEl.value = state.context;
+  }
+  const detected = detectPersona(state.context);
+  state.persona = detected;
+  personaSelectEl.value = detected;
+  localStorage.setItem('gt_persona', detected);
+  contextIndicatorEl.classList.remove('loaded', 'custom');
+  if (detected === 'none') {
+    contextIndicatorEl.textContent = 'NONE';
+  } else if (detected === 'custom') {
+    contextIndicatorEl.textContent = 'CUSTOM CONTEXT';
+    contextIndicatorEl.classList.add('custom');
+  } else if (detected === 'cdawg') {
+    contextIndicatorEl.textContent = 'C-DAWG LOADED';
+    contextIndicatorEl.classList.add('loaded');
+  } else if (detected === 'gdawg') {
+    contextIndicatorEl.textContent = 'G-DAWG LOADED';
+    contextIndicatorEl.classList.add('loaded');
+  } else if (detected === 'pdawg') {
+    contextIndicatorEl.textContent = 'P-DAWG LOADED';
+    contextIndicatorEl.classList.add('loaded');
+  } else if (detected === 'sev') {
+    contextIndicatorEl.textContent = 'SEV LOADED';
+    contextIndicatorEl.classList.add('loaded');
+  }
+  if (detected === 'cdawg') {
+    loadContBtnEl.classList.add('loaded');
+    loadContBtnEl.textContent = 'CONTINUUM LOADED';
+  } else {
+    loadContBtnEl.classList.remove('loaded');
+    loadContBtnEl.textContent = 'LOAD CONTINUUM';
+  }
+  updateHint();
+}
+
+function applyPersona(persona) {
+  if (persona === 'custom') {
+    state.persona = 'custom';
+    localStorage.setItem('gt_persona', 'custom');
+    return;
+  }
+  const preset = PERSONA_PRESETS[persona] || '';
+  state.context = preset;
+  state.persona = persona;
+  localStorage.setItem('gt_context', preset);
+  localStorage.setItem('gt_persona', persona);
+  renderContextSection();
+}
+
+function renderMessages() {
+  if (state.messages.length > 0 && emptyState.parentNode) {
+    emptyState.remove();
+  } else if (state.messages.length === 0 && !document.getElementById('emptyState')) {
+    chatEl.appendChild(emptyState);
+  }
+  Array.from(chatEl.querySelectorAll('.message, .tool-call-card')).forEach(el => el.remove());
+  state.messages.forEach((msg, idx) => renderMessage(msg, idx));
+  msgCountEl.textContent = `${state.messages.length} MSG`;
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+
+function renderMessage(msg, idx) {
+  if (msg.type === 'tool_call') {
+    renderToolCard(msg, idx);
+    return;
+  }
+  const wrap = document.createElement('div');
+  wrap.className = `message ${msg.role}${msg.error ? ' error' : ''}`;
+  const meta = document.createElement('div');
+  meta.className = 'message-meta';
+  if (msg.role === 'user') {
+    meta.innerHTML = `<span class="message-role">YOU</span>`;
+  } else {
+    const provLabel = msg.provider ? PROVIDERS[msg.provider]?.label || msg.provider.toUpperCase() : 'AI';
+    const ctxTag = msg.persona && msg.persona !== 'none'
+      ? `<span class="message-context-tag">[${msg.persona.toUpperCase()}]</span>` : '';
+    const tokTag = (typeof msg.tokens === 'number' && msg.tokens > 0)
+      ? `<span class="message-tokens">${msg.tokens.toLocaleString()} TOK</span>` : '';
+    meta.innerHTML = `
+      <span class="message-role">RESPONSE //</span>
+      <span class="message-provider">${provLabel}</span>
+      <span class="message-model">${msg.model || ''}</span>
+      ${ctxTag}
+      ${tokTag}
+    `;
+  }
+  const time = document.createElement('span');
+  time.className = 'message-time';
+  time.textContent = msg.time || '';
+  meta.appendChild(time);
+  wrap.appendChild(meta);
+
+  if (msg.confab && !msg.error) {
+    const warn = document.createElement('div');
+    warn.className = 'confab-warning';
+    warn.innerHTML = `<span class="label">CONFABULATION GUARD //</span> this reply claims a tool action, but no tool ran this turn. Treat the claim as unverified and check against disk before trusting it.`;
+    wrap.appendChild(warn);
+  }
+
+  const body = document.createElement('div');
+  body.className = 'message-body';
+  body.textContent = msg.content;
+  wrap.appendChild(body);
+  chatEl.appendChild(wrap);
+}
+
+function renderToolCard(msg, idx) {
+  const wrap = document.createElement('div');
+  wrap.className = 'tool-call-card';
+  const header = document.createElement('div');
+  header.className = 'tool-call-header';
+  const statusClass = msg.status === 'ok' ? 'ok' : msg.status === 'err' ? 'err' : '';
+  header.innerHTML = `
+    <span class="tool-call-icon">&#9656; TOOL</span>
+    <span class="tool-call-name">${msg.name}</span>
+    <span class="tool-call-summary">${escapeHtml(msg.summary || '')}</span>
+    <span class="tool-call-status ${statusClass}">${msg.status || 'pending'}</span>
+    <span class="tool-call-toggle">[+]</span>
+  `;
+  const body = document.createElement('div');
+  body.className = 'tool-call-body';
+  let bodyHtml = '';
+  if (msg.input) {
+    bodyHtml += `<div class="tool-call-section"><div class="tool-call-section-label">INPUT</div><div class="tool-call-section-content">${escapeHtml(JSON.stringify(msg.input, null, 2))}</div></div>`;
+  }
+  if (msg.output) {
+    const outStr = typeof msg.output === 'string' ? msg.output : JSON.stringify(msg.output, null, 2);
+    bodyHtml += `<div class="tool-call-section"><div class="tool-call-section-label">OUTPUT</div><div class="tool-call-section-content">${escapeHtml(outStr)}</div></div>`;
+  }
+  if (msg.error) {
+    bodyHtml += `<div class="tool-call-section"><div class="tool-call-section-label">ERROR</div><div class="tool-call-section-content">${escapeHtml(msg.error)}</div></div>`;
+  }
+  body.innerHTML = bodyHtml;
+  header.onclick = () => {
+    body.classList.toggle('open');
+    header.classList.toggle('open');
+    const toggle = header.querySelector('.tool-call-toggle');
+    toggle.textContent = body.classList.contains('open') ? '[-]' : '[+]';
+  };
+  wrap.appendChild(header);
+  wrap.appendChild(body);
+  chatEl.appendChild(wrap);
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function addTypingIndicator() {
+  const wrap = document.createElement('div');
+  wrap.className = 'message assistant';
+  wrap.id = 'typingMsg';
+  const p = PROVIDERS[state.provider];
+  const m = p.models.find(x => x.id === state.model);
+  wrap.innerHTML = `
+    <div class="message-meta">
+      <span class="message-role">RESPONSE //</span>
+      <span class="message-provider">${p.label}</span>
+      <span class="message-model">${m ? m.label : state.model}</span>
+    </div>
+    <div class="message-body">
+      <div class="typing-indicator"><span></span><span></span><span></span></div>
+    </div>
+  `;
+  chatEl.appendChild(wrap);
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+function removeTypingIndicator() { const el = document.getElementById('typingMsg'); if (el) el.remove(); }
+
+function saveMessages() {
+  localStorage.setItem('gt_messages', JSON.stringify(state.messages));
+}
+
+// ============================================================
+// SYSTEM PROMPT ASSEMBLY (with body self-ID injection)
+// ============================================================
+
+function buildSystemPrompt() {
+  const p = PROVIDERS[state.provider];
+  const m = p.models.find(x => x.id === state.model);
+  // System timestamp injection (v1.3.1, L-13). Closes the path where a body
+  // with no clock tool generates a plausible-looking timestamp from training
+  // data. The real timestamp is always in the prompt, so the body can read it
+  // rather than confabulate one.
+  const now = new Date();
+  const tz = (function() {
+    try { return Intl.DateTimeFormat().resolvedOptions().timeZone; }
+    catch (e) { return 'unknown'; }
+  })();
+  const tsBlock = `[SYSTEM_CONTEXT]\ntimestamp_utc: ${now.toISOString()}\ntimestamp_local: ${now.toString()}\noperator_timezone: ${tz}\n\n`;
+  const bodyHint = `[CURRENT BODY: ${p.label} / ${m ? m.label : state.model}]\n[TOOLS: ${state.toolsEnabled && p.supportsTools && state.bridgeOnline ? 'available via local bridge' : 'unavailable in this turn'}]\n\n`;
+  return tsBlock + bodyHint + (state.context || '');
+}
+
+// ============================================================
+// FRIENDLY ERROR MESSAGES
+// ============================================================
+
+function friendlyError(provider, status, raw) {
+  if (status === 429) {
+    if (provider === 'gemini') return `Rate limit hit on Gemini (free tier daily quota). Try Gemini 2.5 Flash (separate quota), switch vendors, or wait until midnight Pacific.`;
+    if (provider === 'openai') return `Rate limit hit on OpenAI. Wait a moment or check your usage at platform.openai.com.`;
+    if (provider === 'anthropic') return `Rate limit hit on Anthropic. Wait a moment or check your usage at console.anthropic.com.`;
+    return `Rate limit hit (429).`;
+  }
+  if (status === 401 || status === 403) return `Auth failure on ${provider}. Check your API key in settings.`;
+  if (status === 404) return `Model not found on ${provider}. The model ID may be outdated. Try a different model from the dropdown.`;
+  if (status === 400) return `Bad request to ${provider}. May be a model/parameter mismatch.\n\nRaw: ${raw.slice(0, 300)}`;
+  if (status === 500 || status === 502 || status === 503) return `${provider} server error (${status}). Try again in a moment.`;
+  return `${provider} returned ${status}: ${raw.slice(0, 300)}`;
+}
+
+// ============================================================
+// PROVIDER ADAPTERS (non-tool baseline calls)
+// Each returns { text, data } so the caller can accrue token usage.
+// ============================================================
+
+async function callOpenAI(messages, key, model, systemPrompt) {
+  const url = 'https://api.openai.com/v1/chat/completions';
+  const messageList = messages
+    .filter(m => m.type !== 'tool_call' && (m.role === 'user' || m.role === 'assistant'))
+    .map(m => ({ role: m.role, content: m.content }));
+  if (systemPrompt && systemPrompt.trim()) {
+    messageList.unshift({ role: 'system', content: systemPrompt });
+  }
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'authorization': `Bearer ${key}`
+    },
+    body: JSON.stringify({ model, messages: messageList })
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw { status: res.status, message: err };
+  }
+  const data = await res.json();
+  return { text: data.choices?.[0]?.message?.content || '[empty response]', data };
+}
+
+async function callGemini(messages, key, model, systemPrompt) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`;
+  const contents = messages
+    .filter(m => m.type !== 'tool_call' && (m.role === 'user' || m.role === 'assistant'))
+    .map(m => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }]
+    }));
+  const body = { contents };
+  if (systemPrompt && systemPrompt.trim()) {
+    body.systemInstruction = { parts: [{ text: systemPrompt }] };
+  }
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw { status: res.status, message: err };
+  }
+  const data = await res.json();
+  return { text: data.candidates?.[0]?.content?.parts?.[0]?.text || '[empty response]', data };
+}
+
+// ============================================================
+// SEND FLOW
+// ============================================================
+
+async function sendMessage() {
+  if (state.sending) return;
+  const text = inputEl.value.trim();
+  if (!text) return;
+  const key = state.keys[state.provider];
+  if (!key) { openModal(); return; }
+
+  state.messages.push({ role: 'user', content: text, time: nowTime() });
+  inputEl.value = '';
+  inputEl.style.height = 'auto';
+  saveMessages();
+  renderMessages();
+
+  state.sending = true;
+  sendBtn.disabled = true;
+  // Reset the per-turn token accumulator at the start of every send.
+  state.pendingTurnTokens = 0;
+
+  const useTools = state.toolsEnabled && PROVIDERS[state.provider].supportsTools && state.bridgeOnline;
+
+  try {
+    if (state.provider === 'anthropic') {
+      await runAnthropicTurn(key, useTools);
+    } else if (state.provider === 'gemini') {
+      if (useTools) {
+        await runGeminiTurn(key, true);
+      } else {
+        await runSimpleTurn(callGemini, key);
+      }
+    } else if (state.provider === 'openai') {
+      if (useTools) {
+        await runOpenAITurn(key, true);
+      } else {
+        await runSimpleTurn(callOpenAI, key);
+      }
+    }
+  } catch (e) {
+    removeTypingIndicator();
+    const friendly = e.status ? friendlyError(state.provider, e.status, e.message || '') : (e.message || String(e));
+    state.messages.push({
+      role: 'assistant',
+      content: friendly,
+      provider: state.provider,
+      model: state.model,
+      error: true,
+      time: nowTime()
+    });
+    saveMessages();
+    renderMessages();
+  } finally {
+    // Commit whatever token usage accrued this turn, even on partial failure.
+    commitTurnTokens();
+    state.sending = false;
+    sendBtn.disabled = false;
+    inputEl.focus();
+  }
+}
+
+async function runSimpleTurn(adapter, key) {
+  addTypingIndicator();
+  const systemPrompt = buildSystemPrompt();
+  const result = await adapter(state.messages, key, state.model, systemPrompt);
+  removeTypingIndicator();
+  accrueUsage(state.provider, result.data);
+  const u = extractUsage(state.provider, result.data);
+  const idx = state.messages.length;
+  state.messages.push({
+    role: 'assistant',
+    content: result.text,
+    provider: state.provider,
+    model: state.model,
+    persona: state.context ? state.persona : null,
+    tokens: u ? (u.input + u.output) : null,
+    time: nowTime()
+  });
+  saveMessages();
+  renderMessages();
+  applyConfabGuard([idx], 0);
+}
+
+function pushMaxIterMsg(provider) {
+  state.messages.push({
+    role: 'assistant',
+    content: `[tool-use loop hit max iterations. Stopping to prevent runaway.]`,
+    provider: provider,
+    model: state.model,
+    error: true,
+    time: nowTime()
+  });
+  saveMessages();
+  renderMessages();
+}
+
+// Anthropic tool-use loop.
+async function runAnthropicTurn(key, useTools) {
+  const apiMessages = state.messages
+    .filter(m => m.type !== 'tool_call' && (m.role === 'user' || m.role === 'assistant'))
+    .map(m => ({ role: m.role, content: m.content }));
+
+  const systemPrompt = buildSystemPrompt();
+  const url = 'https://api.anthropic.com/v1/messages';
+  const headers = {
+    'content-type': 'application/json',
+    'x-api-key': key,
+    'anthropic-version': '2023-06-01',
+    'anthropic-dangerous-direct-browser-access': 'true'
+  };
+
+  let iterations = 0;
+  const MAX_ITER = 12;
+  let turnToolCount = 0;
+  const textMsgIdx = [];
+
+  while (iterations < MAX_ITER) {
+    iterations++;
+    addTypingIndicator();
+
+    const body = {
+      model: state.model,
+      max_tokens: 4096,
+      system: systemPrompt,
+      messages: apiMessages
+    };
+    if (useTools) body.tools = TOOLS;
+
+    const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
+    if (!res.ok) {
+      removeTypingIndicator();
+      const errText = await res.text();
+      throw { status: res.status, message: errText };
+    }
+    const data = await res.json();
+    removeTypingIndicator();
+    accrueUsage('anthropic', data);
+
+    const content = data.content || [];
+    const textBlocks = content.filter(b => b.type === 'text');
+    const toolUseBlocks = content.filter(b => b.type === 'tool_use');
+    const turnUsage = extractUsage('anthropic', data);
+
+    if (textBlocks.length > 0) {
+      const combinedText = textBlocks.map(b => b.text).join('\n\n');
+      const idx = state.messages.length;
+      state.messages.push({
+        role: 'assistant',
+        content: combinedText,
+        provider: 'anthropic',
+        model: state.model,
+        persona: state.context ? state.persona : null,
+        tokens: turnUsage ? (turnUsage.input + turnUsage.output) : null,
+        time: nowTime()
+      });
+      textMsgIdx.push(idx);
+      saveMessages();
+      renderMessages();
+    }
+
+    if (toolUseBlocks.length === 0 || data.stop_reason !== 'tool_use') {
+      break;
+    }
+
+    apiMessages.push({ role: 'assistant', content });
+
+    const toolResultBlocks = [];
+    for (const tu of toolUseBlocks) {
+      const cardMsg = {
+        type: 'tool_call',
+        name: tu.name,
+        summary: summarizeToolCall(tu.name, tu.input),
+        input: tu.input,
+        status: 'running',
+        time: nowTime()
+      };
+      state.messages.push(cardMsg);
+      turnToolCount++;
+      saveMessages();
+      renderMessages();
+
+      try {
+        const result = await executeTool(tu.name, tu.input);
+        cardMsg.output = result;
+        cardMsg.status = 'ok';
+        toolResultBlocks.push({
+          type: 'tool_result',
+          tool_use_id: tu.id,
+          content: typeof result === 'string' ? result : JSON.stringify(result)
+        });
+      } catch (e) {
+        cardMsg.error = e.message || String(e);
+        cardMsg.status = 'err';
+        toolResultBlocks.push({
+          type: 'tool_result',
+          tool_use_id: tu.id,
+          content: `ERROR: ${e.message || String(e)}`,
+          is_error: true
+        });
+      }
+      saveMessages();
+      renderMessages();
+    }
+
+    apiMessages.push({ role: 'user', content: toolResultBlocks });
+  }
+
+  if (iterations >= MAX_ITER) {
+    pushMaxIterMsg('anthropic');
+  }
+
+  applyConfabGuard(textMsgIdx, turnToolCount);
+}
+
+// Gemini tool-use loop. Native function-calling.
+async function runGeminiTurn(key, useTools) {
+  const contents = state.messages
+    .filter(m => m.type !== 'tool_call' && (m.role === 'user' || m.role === 'assistant'))
+    .map(m => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }]
+    }));
+
+  const systemPrompt = buildSystemPrompt();
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${state.model}:generateContent?key=${encodeURIComponent(key)}`;
+
+  let iterations = 0;
+  const MAX_ITER = 12;
+  let turnToolCount = 0;
+  const textMsgIdx = [];
+
+  while (iterations < MAX_ITER) {
+    iterations++;
+    addTypingIndicator();
+
+    const body = { contents };
+    if (systemPrompt && systemPrompt.trim()) {
+      body.systemInstruction = { parts: [{ text: systemPrompt }] };
+    }
+    if (useTools) body.tools = geminiToolDecls();
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) {
+      removeTypingIndicator();
+      const errText = await res.text();
+      throw { status: res.status, message: errText };
+    }
+    const data = await res.json();
+    removeTypingIndicator();
+    accrueUsage('gemini', data);
+
+    const cand = data.candidates && data.candidates[0];
+    const parts = (cand && cand.content && cand.content.parts) || [];
+    const textParts = parts.filter(p => typeof p.text === 'string' && p.text.length > 0);
+    const fnParts = parts.filter(p => p.functionCall);
+    const turnUsage = extractUsage('gemini', data);
+
+    if (textParts.length > 0) {
+      const combinedText = textParts.map(p => p.text).join('\n\n');
+      const idx = state.messages.length;
+      state.messages.push({
+        role: 'assistant',
+        content: combinedText,
+        provider: 'gemini',
+        model: state.model,
+        persona: state.context ? state.persona : null,
+        tokens: turnUsage ? (turnUsage.input + turnUsage.output) : null,
+        time: nowTime()
+      });
+      textMsgIdx.push(idx);
+      saveMessages();
+      renderMessages();
+    }
+
+    if (fnParts.length === 0) {
+      break;
+    }
+
+    contents.push({ role: 'model', parts: parts });
+
+    const responseParts = [];
+    for (const fp of fnParts) {
+      const fc = fp.functionCall || {};
+      const args = fc.args || {};
+      const cardMsg = {
+        type: 'tool_call',
+        name: fc.name,
+        summary: summarizeToolCall(fc.name, args),
+        input: args,
+        status: 'running',
+        time: nowTime()
+      };
+      state.messages.push(cardMsg);
+      turnToolCount++;
+      saveMessages();
+      renderMessages();
+
+      try {
+        const result = await executeTool(fc.name, args);
+        cardMsg.output = result;
+        cardMsg.status = 'ok';
+        responseParts.push({
+          functionResponse: {
+            name: fc.name,
+            response: { result: typeof result === 'string' ? result : JSON.stringify(result) }
+          }
+        });
+      } catch (e) {
+        cardMsg.error = e.message || String(e);
+        cardMsg.status = 'err';
+        responseParts.push({
+          functionResponse: {
+            name: fc.name,
+            response: { error: e.message || String(e) }
+          }
+        });
+      }
+      saveMessages();
+      renderMessages();
+    }
+
+    contents.push({ role: 'user', parts: responseParts });
+  }
+
+  if (iterations >= MAX_ITER) {
+    pushMaxIterMsg('gemini');
+  }
+
+  applyConfabGuard(textMsgIdx, turnToolCount);
+}
+
+// OpenAI tool-use loop (v1.3). Native function-calling.
+// Key shape differences from Anthropic and Gemini:
+//  - tool calls arrive on message.tool_calls, each with id + function{name,arguments}
+//  - function.arguments is a JSON STRING and must be parsed
+//  - the assistant message carrying tool_calls MUST be replayed into history
+//  - each tool result is its own message: {role:'tool', tool_call_id, content}
+async function runOpenAITurn(key, useTools) {
+  const url = 'https://api.openai.com/v1/chat/completions';
+  const systemPrompt = buildSystemPrompt();
+
+  // Seed history from prior plain user/assistant messages.
+  const apiMessages = state.messages
+    .filter(m => m.type !== 'tool_call' && (m.role === 'user' || m.role === 'assistant'))
+    .map(m => ({ role: m.role, content: m.content }));
+  if (systemPrompt && systemPrompt.trim()) {
+    apiMessages.unshift({ role: 'system', content: systemPrompt });
+  }
+
+  let iterations = 0;
+  const MAX_ITER = 12;
+  let turnToolCount = 0;
+  const textMsgIdx = [];
+
+  while (iterations < MAX_ITER) {
+    iterations++;
+    addTypingIndicator();
+
+    const body = { model: state.model, messages: apiMessages };
+    if (useTools) {
+      body.tools = openaiToolDecls();
+      body.tool_choice = 'auto';
+    }
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'authorization': `Bearer ${key}`
+      },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) {
+      removeTypingIndicator();
+      const errText = await res.text();
+      throw { status: res.status, message: errText };
+    }
+    const data = await res.json();
+    removeTypingIndicator();
+    accrueUsage('openai', data);
+
+    const choice = data.choices && data.choices[0];
+    const message = (choice && choice.message) || {};
+    const toolCalls = message.tool_calls || [];
+    const turnUsage = extractUsage('openai', data);
+
+    if (message.content && message.content.length > 0) {
+      const idx = state.messages.length;
+      state.messages.push({
+        role: 'assistant',
+        content: message.content,
+        provider: 'openai',
+        model: state.model,
+        persona: state.context ? state.persona : null,
+        tokens: turnUsage ? (turnUsage.input + turnUsage.output) : null,
+        time: nowTime()
+      });
+      textMsgIdx.push(idx);
+      saveMessages();
+      renderMessages();
+    }
+
+    if (toolCalls.length === 0 || choice.finish_reason !== 'tool_calls') {
+      break;
+    }
+
+    // The assistant message that requested the tools must be replayed verbatim,
+    // including its tool_calls array, or the follow-up request 400s.
+    apiMessages.push({
+      role: 'assistant',
+      content: message.content || null,
+      tool_calls: toolCalls
+    });
+
+    for (const tc of toolCalls) {
+      const fn = tc.function || {};
+      let args = {};
+      let parseError = null;
+      try {
+        args = fn.arguments ? JSON.parse(fn.arguments) : {};
+      } catch (e) {
+        parseError = `could not parse tool arguments: ${e.message || String(e)}`;
+      }
+
+      const cardMsg = {
+        type: 'tool_call',
+        name: fn.name,
+        summary: summarizeToolCall(fn.name, args),
+        input: args,
+        status: 'running',
+        time: nowTime()
+      };
+      state.messages.push(cardMsg);
+      turnToolCount++;
+      saveMessages();
+      renderMessages();
+
+      let resultContent;
+      if (parseError) {
+        cardMsg.error = parseError;
+        cardMsg.status = 'err';
+        resultContent = `ERROR: ${parseError}`;
+      } else {
+        try {
+          const result = await executeTool(fn.name, args);
+          cardMsg.output = result;
+          cardMsg.status = 'ok';
+          resultContent = typeof result === 'string' ? result : JSON.stringify(result);
+        } catch (e) {
+          cardMsg.error = e.message || String(e);
+          cardMsg.status = 'err';
+          resultContent = `ERROR: ${e.message || String(e)}`;
+        }
+      }
+      saveMessages();
+      renderMessages();
+
+      // Each tool result is its own message, keyed by tool_call_id.
+      apiMessages.push({
+        role: 'tool',
+        tool_call_id: tc.id,
+        content: resultContent
+      });
+    }
+  }
+
+  if (iterations >= MAX_ITER) {
+    pushMaxIterMsg('openai');
+  }
+
+  applyConfabGuard(textMsgIdx, turnToolCount);
+}
+
+// ============================================================
+// SETTINGS MODAL
+// ============================================================
+
+function openModal() {
+  $('key_anthropic').value = state.keys.anthropic;
+  $('key_openai').value = state.keys.openai;
+  $('key_gemini').value = state.keys.gemini;
+  updateKeyStatuses();
+  $('modalBackdrop').classList.add('open');
+}
+function closeModal() { $('modalBackdrop').classList.remove('open'); }
+function updateKeyStatuses() {
+  ['anthropic', 'openai', 'gemini'].forEach(p => {
+    const el = $(`status_${p}`);
+    if (state.keys[p]) { el.textContent = 'SET'; el.classList.add('set'); }
+    else { el.textContent = 'NOT SET'; el.classList.remove('set'); }
+  });
+}
+function saveKeys() {
+  ['anthropic', 'openai', 'gemini'].forEach(p => {
+    const val = $(`key_${p}`).value.trim();
+    state.keys[p] = val;
+    if (val) localStorage.setItem(`gt_key_${p}`, val);
+    else localStorage.removeItem(`gt_key_${p}`);
+  });
+  updateKeyStatuses();
+  renderPills();
+  closeModal();
+}
+
+// ============================================================
+// IDENTITY MANAGER (v2 / Stage 2)
+// Frontend for docs/identity-manager-v2-spec.md.
+//
+// Verify:  bridge hashes an identity file -> operator pastes the Keeper
+//          known-good hash -> client does a real string comparison.
+// Sign:    bridge hashes a real work file and writes a separate signature
+//          file binding it to a signer identity hash.
+//
+// The verify verdict is a genuine equality check. Nothing is marked
+// verified without COMPARE returning a match.
+// ============================================================
+
+let identityState = {
+  computedHash: null,   // hash of the identity file, from the bridge
+  verifiedHash: null,   // set only when COMPARE confirms a match
+  verifiedName: null
+};
+
+function openIdentityModal() {
+  $('modalBackdrop').classList.add('open');
+  $('identityModal').style.display = 'block';
+}
+
+function closeIdentityModal() {
+  $('identityModal').style.display = 'none';
+  $('modalBackdrop').classList.remove('open');
+}
+
+// Normalize a hash for comparison: trim, lowercase, strip any whitespace.
+function normalizeHash(h) {
+  return (h || '').trim().toLowerCase().replace(/\s+/g, '');
+}
+
+// Step 1a: ask the bridge to hash the identity file.
+async function identityHashFile() {
+  const filePath = $('idFilePath').value.trim();
+  const computedEl = $('idComputedHash');
+  if (!filePath) {
+    computedEl.value = '';
+    alert('Enter the identity file path first.');
+    return;
+  }
+  if (!state.bridgeOnline) {
+    computedEl.value = '';
+    alert('Bridge is offline. Start bridge.js, then try again.');
+    return;
+  }
+  computedEl.value = 'hashing via bridge...';
+  try {
+    const resp = await fetch(`${BRIDGE_URL}/identity/hash-file`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: filePath })
+    });
+    const data = await resp.json();
+    if (!resp.ok || !data.hash) {
+      computedEl.value = '';
+      alert(`Bridge could not hash that file.\n\n${data.error || 'unknown error'}`);
+      return;
+    }
+    identityState.computedHash = data.hash;
+    computedEl.value = data.hash;
+    // Carry the computed hash into the sign-work signer field as a convenience.
+    if (!$('idSignerHash').value.trim()) {
+      $('idSignerHash').value = data.hash;
+    }
+  } catch (e) {
+    computedEl.value = '';
+    alert(`Bridge call failed: ${e.message}`);
+  }
+}
+
+// Step 1b: compare the computed hash against the operator's Keeper hash.
+// This is the real verification. Strict equality after normalization.
+function identityCompare() {
+  const verdictEl = $('idVerdict');
+  const verdictText = $('idVerdictText');
+  const computed = normalizeHash($('idComputedHash').value);
+  const known = normalizeHash($('idKnownHash').value);
+
+  verdictEl.classList.remove('verdict-match', 'verdict-nomatch');
+
+  if (!computed) {
+    verdictText.textContent = 'No computed hash. Run HASH FILE VIA BRIDGE first.';
+    return;
+  }
+  if (!known) {
+    verdictText.textContent = 'Paste the known-good hash from Keeper to compare.';
+    return;
+  }
+
+  if (computed === known) {
+    verdictEl.classList.add('verdict-match');
+    verdictText.textContent = 'MATCH. This identity file hashes to the Keeper record. Identity confirmed, card untampered.';
+    identityState.verifiedHash = computed;
+    identityState.verifiedName = ($('idSignerName').value.trim() || null);
+    $('identityDot').classList.remove('off');
+    $('identityText').textContent = 'IDENTITY: VERIFIED';
+  } else {
+    verdictEl.classList.add('verdict-nomatch');
+    verdictText.textContent = 'NO MATCH. The computed hash does not equal the Keeper record. Do NOT proceed: either the identity file was altered, or this is not the expected body.';
+    identityState.verifiedHash = null;
+    $('identityDot').classList.add('off');
+    $('identityText').textContent = 'IDENTITY: UNVERIFIED';
+  }
+}
+
+// Step 2: sign a work product. Binds a real work file hash to a signer
+// identity hash via the bridge, which writes a separate signature file.
+async function identitySignWork() {
+  const resultEl = $('idSignResult');
+  const resultText = $('idSignResultText');
+  const workPath = $('idWorkPath').value.trim();
+  const signerName = $('idSignerName').value.trim();
+  const signerHash = normalizeHash($('idSignerHash').value);
+
+  resultEl.classList.remove('verdict-match', 'verdict-nomatch');
+
+  if (!workPath) { resultText.textContent = 'Enter the work file path.'; return; }
+  if (!signerName) { resultText.textContent = 'Enter the signer name.'; return; }
+  if (!signerHash) { resultText.textContent = 'Enter the signer identity hash (verify an identity above to carry it in).'; return; }
+  if (!state.bridgeOnline) { resultText.textContent = 'Bridge is offline. Start bridge.js, then try again.'; return; }
+
+  resultText.textContent = 'signing via bridge...';
+  try {
+    const resp = await fetch(`${BRIDGE_URL}/identity/sign-work`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        workPath: workPath,
+        signerName: signerName,
+        signerIdentityHash: signerHash
+      })
+    });
+    const data = await resp.json();
+    if (!resp.ok || !data.signaturePath) {
+      resultEl.classList.add('verdict-nomatch');
+      resultText.textContent = `Sign failed: ${data.error || 'unknown error'}`;
+      return;
+    }
+    resultEl.classList.add('verdict-match');
+    const sig = data.signature || {};
+    resultText.textContent =
+      `SIGNED. Signature written to:\n${data.signaturePath}\n\n` +
+      `work_hash: ${sig.work_hash || '?'}\n` +
+      `signer: ${sig.signer || '?'}\n` +
+      `signed_at: ${sig.signed_at || '?'}`;
+  } catch (e) {
+    resultEl.classList.add('verdict-nomatch');
+    resultText.textContent = `Bridge call failed: ${e.message}`;
+  }
+}
+
+
+
+// ============================================================
+// EVENT WIRING
+// ============================================================
+
+inputEl.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
+inputEl.addEventListener('input', () => {
+  inputEl.style.height = 'auto';
+  inputEl.style.height = Math.min(inputEl.scrollHeight, 200) + 'px';
+});
+sendBtn.addEventListener('click', sendMessage);
+
+$('settingsBtn').addEventListener('click', openModal);
+$('modalCancel').addEventListener('click', closeModal);
+$('modalSave').addEventListener('click', saveKeys);
+$('modalBackdrop').addEventListener('click', (e) => { if (e.target.id === 'modalBackdrop') closeModal(); });
+
+// Identity Manager event listeners (v2 / Stage 2)
+$('identityBtn').addEventListener('click', openIdentityModal);
+$('identityClose').addEventListener('click', closeIdentityModal);
+$('idHashBtn').addEventListener('click', identityHashFile);
+$('idCompareBtn').addEventListener('click', identityCompare);
+$('idSignBtn').addEventListener('click', identitySignWork);
+
+$('addProviderBtn').addEventListener('click', () => {
+  $('customProviderPanel').classList.toggle('open');
+});
+
+$('clearChatBtn').addEventListener('click', () => {
+  if (state.messages.length === 0) return;
+  if (confirm('Clear chat history? Persona (system context) will be preserved. Session token count resets. (Note: switching the provider pill triggers this same clear automatically per L-14.)')) {
+    state.messages = [];
+    state.sessionTokens = 0;
+    state.turnTokens = 0;
+    state.pendingTurnTokens = 0;
+    localStorage.setItem('gt_session_tokens', '0');
+    saveMessages();
+    renderMessages();
+    renderTokenMeter();
+  }
+});
+
+contextHeaderEl.addEventListener('click', () => {
+  state.contextExpanded = !state.contextExpanded;
+  localStorage.setItem('gt_context_expanded', state.contextExpanded);
+  renderContextSection();
+});
+contextBodyEl.addEventListener('click', (e) => e.stopPropagation());
+
+personaSelectEl.addEventListener('change', (e) => applyPersona(e.target.value));
+
+loadContBtnEl.addEventListener('click', (e) => {
+  e.stopPropagation();
+  applyPersona('cdawg');
+  if (!state.contextExpanded) {
+    state.contextExpanded = true;
+    localStorage.setItem('gt_context_expanded', 'true');
+    renderContextSection();
+  }
+});
+
+clearContextBtnEl.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (!confirm('Clear system context (persona)? Chat history will be preserved.')) return;
+  state.context = '';
+  state.persona = 'none';
+  localStorage.setItem('gt_context', '');
+  localStorage.setItem('gt_persona', 'none');
+  renderContextSection();
+});
+
+contextTextareaEl.addEventListener('input', () => {
+  state.context = contextTextareaEl.value;
+  localStorage.setItem('gt_context', state.context);
+  renderContextSection();
+});
+
+toolsToggleEl.addEventListener('click', () => {
+  if (toolsToggleEl.classList.contains('disabled')) return;
+  state.toolsEnabled = !state.toolsEnabled;
+  localStorage.setItem('gt_tools_enabled', state.toolsEnabled);
+  updateToolsToggleState();
+  updateHint();
+});
+
+// Routing suggester wiring (v1.3.1)
+$('taskShapeSelect').addEventListener('change', (e) => {
+  state.taskShape = e.target.value;
+  state.routingNoteDismissed = false; // user re-engaged with routing, show notes again
+  localStorage.setItem('gt_task_shape', state.taskShape);
+  renderRoutingBadges();
+  updateRoutingNote();
+  // If we have not loaded datums yet (e.g. bridge came online after boot), try.
+  if (state.bridgeOnline && state.routingDatums.length === 0) {
+    loadRoutingDatums();
+  }
+});
+
+$('routingNoteDismiss').addEventListener('click', () => {
+  state.routingNoteDismissed = true;
+  $('routingNote').classList.remove('visible');
+});
+
+// ============================================================
+// BOOT
+// ============================================================
+
+renderPills();
+renderModelSelect();
+renderContextSection();
+updateHint();
+renderMessages();
+updateKeyStatuses();
+renderTokenMeter();
+// v1.3.1: restore task shape selection from localStorage before first render
+if (state.taskShape) {
+  $('taskShapeSelect').value = state.taskShape;
+}
+checkBridge();
+setInterval(checkBridge, 10000);
+
+if (!state.keys.anthropic && !state.keys.openai && !state.keys.gemini) {
+  setTimeout(openModal, 400);
+}
+</script>
+
+</body>
+</html>
