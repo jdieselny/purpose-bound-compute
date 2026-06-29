@@ -67,6 +67,6 @@ DRAFT advances to STABLE when:
 ## Relation to other specs
 
 - Wraps: [Packing Slip](packing-slip.md)
-- Signed against: [Truth Root](../truth-root.md)
-- Routed by: [AIR Protocol](../air-protocol.md)
-- Binds: [GRACE Contract](../grace-contract.md)
+- Signed against: [Truth Root](https://github.com/jdieselny/ecr-wg/blob/main/specs/truth-root.md)
+- Routed by: [AIR Protocol](https://github.com/jdieselny/ecr-wg/blob/main/specs/air-protocol.md)
+- Binds: [GRACE Contract](https://github.com/jdieselny/ecr-wg/blob/main/specs/grace-contract.md)

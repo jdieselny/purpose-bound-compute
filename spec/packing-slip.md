@@ -64,6 +64,6 @@ DRAFT advances to STABLE when:
 ## Relation to other specs
 
 - Wrapped by: [Bill of Lading](bill-of-lading.md)
-- Resolved against: [COGSTOR](../cogstor.md)
-- Constrained by: [GRACE Contract](../grace-contract.md)
-- Routed by: [AIR Protocol](../air-protocol.md)
+- Resolved against: [COGSTOR](https://github.com/jdieselny/ecr-wg/blob/main/specs/cogstor.md)
+- Constrained by: [GRACE Contract](https://github.com/jdieselny/ecr-wg/blob/main/specs/grace-contract.md)
+- Routed by: [AIR Protocol](https://github.com/jdieselny/ecr-wg/blob/main/specs/air-protocol.md)
