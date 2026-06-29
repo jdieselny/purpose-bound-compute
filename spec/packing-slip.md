@@ -1,5 +1,5 @@
 ---
-aft: AI-generated-user-reviewed-pending
+aft: AI-generated-user-reviewed-approved
 registrant: Justin Kintzele
 generated_at: 2026-05-22
 file_role: primitive-draft
@@ -13,32 +13,32 @@ file_role: primitive-draft
 
 ## Abstract
 
-The Packing Slip is the **ingress envelope** produced by a synthetic agent before any query leaves the local node. It packages the raw human input (the "vomitprompt") together with the local context the synth holds at the moment of the call, and seals the bundle with a cryptographic hash.
+The Packing Slip is the **ingress envelope** produced by a compute node before any execution request leaves the local node. It packages the raw human input (the ingress payload) together with the local context the requestor holds at the moment of the call, and seals the bundle with a cryptographic hash.
 
-It is the first artifact in the Continuum-meta data flow. Everything downstream -- the [Bill of Lading](bill-of-lading.md), AIR routing, COGSTOR cache lookup -- operates on the Packing Slip.
+It is the first artifact in the protocol data flow. Everything downstream (such as the [Bill of Lading](bill-of-lading.md), routing policies, and cache resolution) operates on the Packing Slip.
 
 ## Position in the data flow
 
 ```
-[HUMAN] -> [SYNTH (S/T + L/T memory)] -> [PACKING SLIP + HASH] -> [BILL OF LADING] -> [CONTINUUM-META]
+[HUMAN] -> [REQUESTOR NODE (Context State)] -> [PACKING SLIP + HASH] -> [BILL OF LADING] -> [EXECUTION OVERLAY]
 ```
 
 ## Required fields
 
 A conformant Packing Slip MUST contain:
 
-- **`raw_input`** -- the human input, unmodified.
-- **`synth_id`** -- identifier of the synthetic agent producing the slip.
-- **`short_term_context`** -- current session state the synth is holding (subset of COGSTOR `working_memory` and `active_items`).
-- **`long_term_context_refs`** -- pointers (not contents) to COGSTOR objects the synth believes are relevant. Resolution is the overlay's job.
-- **`grace_fields`** -- at minimum the GOAL and CONSTRAINTS the synth has bound to this call. ROUTING and ANCHOR may be filled by AIR.
-- **`timestamp`** -- when the slip was sealed.
-- **`hash`** -- cryptographic checksum over all of the above. Algorithm unspecified at v0.1; SHA-256 recommended for prototypes.
+- **`raw_input`** : the raw ingress payload or query, unmodified.
+- **`requestor_id`** : identifier of the compute node producing the slip.
+- **`short_term_context`** : current session state the requestor is holding (representing the active pre-execution memory).
+- **`long_term_context_refs`** : pointers (not contents) to historical or external context resources the requestor believes are relevant. Resolution is handled by the execution substrate.
+- **`grace_fields`** : the execution policies (such as the GOAL and CONSTRAINTS) bound to this call.
+- **`timestamp`** : the time at which the slip was sealed.
+- **`hash`** : cryptographic checksum over all of the above. Algorithm unspecified at v0.1; SHA-256 recommended for prototypes.
 
 ## Required properties
 
-- **Local construction.** The Packing Slip is built on the synth node before any network call. It is the artifact that converts unstructured ingress into a structured handoff.
-- **Deterministic hashing.** Identical input + identical context + identical synth state MUST produce identical hashes. This is what makes overlay cache lookup tractable.
+- **Local construction.** The Packing Slip is built on the requestor node before any network call. It is the artifact that converts unstructured ingress into a structured handoff.
+- **Deterministic hashing.** Identical input, identical context, and identical pre-execution state MUST produce identical hashes. This is what makes overlay cache lookup tractable.
 - **Tamper evidence.** Modification of any field after sealing invalidates the hash.
 
 ## Non-goals
@@ -49,9 +49,9 @@ A conformant Packing Slip MUST contain:
 ## Open problems
 
 1. **Hash algorithm and length.** SHA-256 recommended for prototypes; long-term choice (e.g., quantum-resistant) open.
-2. **Long-term context inclusion threshold.** How does the synth decide which long-term context refs to include? Pure relevance scoring, recency, operator-pinned, or learned? Open.
-3. **Context contamination.** A synth handling multiple users in one process must not leak one user's context into another's Packing Slip. Isolation mechanism unspecified.
-4. **Privacy boundary.** A Packing Slip contains raw human input -- the most sensitive payload in the system. Encryption-at-construction (vs. at-Bill-of-Lading-wrap) is open.
+2. **Long-term context inclusion threshold.** How does the requestor node decide which long-term context references to include? Pure relevance scoring, recency, operator-pinned, or learned? Open.
+3. **Context contamination.** A node handling multiple users in one process must not leak one user's context into another's Packing Slip. Isolation mechanism unspecified.
+4. **Privacy boundary.** A Packing Slip contains raw human input: the most sensitive payload in the system. Encryption-at-construction (vs. at-Bill-of-Lading-wrap) is open.
 
 ## Status to advance
 
