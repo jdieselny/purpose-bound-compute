@@ -17,7 +17,7 @@ PREVIOUS_PROVENANCE: Dima // 2026-05-21T18:11:52.349Z
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>GOD TERMINAL // C-DAWG v1.3.4</title>
+<title>G.O.D. TERMINAL // C-DAWG v1.3.4</title>
 <!--
   god-terminal v1.3.4
   Date: 2026-05-16
@@ -1023,8 +1023,9 @@ PREVIOUS_PROVENANCE: Dima // 2026-05-21T18:11:52.349Z
 
 <header>
   <div class="wordmark">
-    GOD <span class="accent">TERMINAL</span>
-    <span class="version">v1.3.3 // C//D // GHOST-PEPPER</span>
+    G.O.D. <span class="accent">TERMINAL</span>
+    <span class="version">v1.3.4 // C//D // GHOST-PEPPER</span>
+    <div style="font-size: 8px; color: var(--text-dim); font-weight: normal; margin-top: 2px; letter-spacing: 0.5px; text-transform: uppercase;">Gateway Operations Dispatcher</div>
   </div>
   <div class="header-meta">
     <span id="bridgeStatus"><span class="status-dot checking" id="bridgeDot"></span><span id="bridgeText">BRIDGE: CHECKING</span></span>
@@ -1086,7 +1087,8 @@ PREVIOUS_PROVENANCE: Dima // 2026-05-21T18:11:52.349Z
 
 <div class="chat-container" id="chat">
   <div class="empty-state" id="emptyState">
-    <span class="big">GOD <span class="accent">TERMINAL</span> v1.3.3</span>
+    <span class="big">G.O.D. <span class="accent">TERMINAL</span> v1.3.4</span>
+    <div style="font-size: 11px; color: var(--text-dim); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Gateway Operations Dispatcher</div>
     Multi-provider chat. Substrate-portable persona injection.<br>
     Filesystem and shell access via local bridge.<br>
     Tool use: Claude, Gemini, and OpenAI. Confabulation guard: live. Token meter: live. Routing suggester: live. Identity Manager: live.<br><br>
@@ -1137,6 +1139,16 @@ PREVIOUS_PROVENANCE: Dima // 2026-05-21T18:11:52.349Z
         <span class="hint-line"><span class="hint-k">Get key</span> &nbsp;<span class="hint-src">aistudio.google.com</span> &rarr; Get API key</span>
         <span class="hint-line"><span class="hint-k">Format</span> &nbsp;AIzaSy...</span>
         <span class="hint-line"><span class="hint-k">Tools</span> &nbsp;<span class="hint-tool-ok">function-calling, working</span></span>
+      </div>
+    </div>
+
+    <div class="key-row">
+      <div class="key-label">xAI GROK <span class="key-status" id="status_xai">NOT SET</span></div>
+      <input type="password" class="key-input" id="key_xai" placeholder="xai-..." autocomplete="off">
+      <div class="key-hint">
+        <span class="hint-line"><span class="hint-k">Get key</span> &nbsp;<span class="hint-src">console.x.ai</span> &rarr; Keys</span>
+        <span class="hint-line"><span class="hint-k">Format</span> &nbsp;xai-...</span>
+        <span class="hint-line"><span class="hint-k">Tools</span> &nbsp;<span class="hint-tool-ok">compatible, working</span></span>
       </div>
     </div>
 
@@ -1260,9 +1272,10 @@ const PROVIDERS = {
     label: 'CLAUDE',
     supportsTools: true,
     models: [
-      { id: 'claude-opus-4-5-20250929', label: 'Opus 4.5' },
-      { id: 'claude-sonnet-4-5-20250929', label: 'Sonnet 4.5' },
-      { id: 'claude-haiku-4-5-20251001', label: 'Haiku 4.5' }
+      { id: 'claude-3-7-sonnet-20250219', label: 'Claude 3.7 Sonnet' },
+      { id: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
+      { id: 'claude-3-opus-20240229', label: 'Claude 3 Opus' },
+      { id: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku' }
     ]
   },
   openai: {
@@ -1271,7 +1284,8 @@ const PROVIDERS = {
     models: [
       { id: 'gpt-4o', label: 'GPT-4o' },
       { id: 'gpt-4o-mini', label: 'GPT-4o mini' },
-      { id: 'gpt-4-turbo', label: 'GPT-4 Turbo' }
+      { id: 'o1', label: 'o1' },
+      { id: 'o3-mini', label: 'o3-mini' }
     ]
   },
   gemini: {
@@ -1280,7 +1294,17 @@ const PROVIDERS = {
     models: [
       { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
       { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+      { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
       { id: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' }
+    ]
+  },
+  xai: {
+    label: 'GROK',
+    supportsTools: true,
+    models: [
+      { id: 'grok-2', label: 'Grok 2' },
+      { id: 'grok-2-mini', label: 'Grok 2 Mini' },
+      { id: 'grok-beta', label: 'Grok Beta' }
     ]
   }
 };
@@ -1467,7 +1491,7 @@ function extractUsage(provider, data) {
       if (!u) return null;
       return { input: u.input_tokens || 0, output: u.output_tokens || 0 };
     }
-    if (provider === 'openai') {
+    if (provider === 'openai' || provider === 'xai') {
       const u = data && data.usage;
       if (!u) return null;
       return { input: u.prompt_tokens || 0, output: u.completion_tokens || 0 };
@@ -1737,7 +1761,8 @@ let state = {
   keys: {
     anthropic: localStorage.getItem('gt_key_anthropic') || '',
     openai: localStorage.getItem('gt_key_openai') || '',
-    gemini: localStorage.getItem('gt_key_gemini') || ''
+    gemini: localStorage.getItem('gt_key_gemini') || '',
+    xai: localStorage.getItem('gt_key_xai') || ''
   },
   messages: JSON.parse(localStorage.getItem('gt_messages') || '[]'),
   context: localStorage.getItem('gt_context') || '',
@@ -2306,6 +2331,7 @@ function friendlyError(provider, status, raw) {
     if (provider === 'gemini') return `Rate limit hit on Gemini (free tier daily quota). Try Gemini 2.5 Flash (separate quota), switch vendors, or wait until midnight Pacific.`;
     if (provider === 'openai') return `Rate limit hit on OpenAI. Wait a moment or check your usage at platform.openai.com.`;
     if (provider === 'anthropic') return `Rate limit hit on Anthropic. Wait a moment or check your usage at console.anthropic.com.`;
+    if (provider === 'xai') return `Rate limit hit on xAI (Grok). Wait a moment or check your usage at console.x.ai.`;
     return `Rate limit hit (429).`;
   }
   if (status === 401 || status === 403) return `Auth failure on ${provider}. Check your API key in settings.`;
@@ -2320,8 +2346,7 @@ function friendlyError(provider, status, raw) {
 // Each returns { text, data } so the caller can accrue token usage.
 // ============================================================
 
-async function callOpenAI(messages, key, model, systemPrompt) {
-  const url = 'https://api.openai.com/v1/chat/completions';
+async function callOpenAI(messages, key, model, systemPrompt, url = 'https://api.openai.com/v1/chat/completions') {
   const messageList = messages
     .filter(m => m.type !== 'tool_call' && (m.role === 'user' || m.role === 'assistant'))
     .map(m => ({ role: m.role, content: m.content }));
@@ -2342,6 +2367,10 @@ async function callOpenAI(messages, key, model, systemPrompt) {
   }
   const data = await res.json();
   return { text: data.choices?.[0]?.message?.content || '[empty response]', data };
+}
+
+async function callGrok(messages, key, model, systemPrompt) {
+  return callOpenAI(messages, key, model, systemPrompt, 'https://api.xai.com/v1/chat/completions');
 }
 
 async function callGemini(messages, key, model, systemPrompt) {
@@ -2407,6 +2436,12 @@ async function sendMessage() {
         await runOpenAITurn(key, true);
       } else {
         await runSimpleTurn(callOpenAI, key);
+      }
+    } else if (state.provider === 'xai') {
+      if (useTools) {
+        await runOpenAITurn(key, true, 'https://api.xai.com/v1/chat/completions', 'xai');
+      } else {
+        await runSimpleTurn(callGrok, key);
       }
     }
   } catch (e) {
@@ -2711,8 +2746,7 @@ async function runGeminiTurn(key, useTools) {
 //  - function.arguments is a JSON STRING and must be parsed
 //  - the assistant message carrying tool_calls MUST be replayed into history
 //  - each tool result is its own message: {role:'tool', tool_call_id, content}
-async function runOpenAITurn(key, useTools) {
-  const url = 'https://api.openai.com/v1/chat/completions';
+async function runOpenAITurn(key, useTools, url = 'https://api.openai.com/v1/chat/completions', providerId = 'openai') {
   const systemPrompt = buildSystemPrompt();
 
   // Seed history from prior plain user/assistant messages.
@@ -2753,19 +2787,19 @@ async function runOpenAITurn(key, useTools) {
     }
     const data = await res.json();
     removeTypingIndicator();
-    accrueUsage('openai', data);
+    accrueUsage(providerId, data);
 
     const choice = data.choices && data.choices[0];
     const message = (choice && choice.message) || {};
     const toolCalls = message.tool_calls || [];
-    const turnUsage = extractUsage('openai', data);
+    const turnUsage = extractUsage(providerId, data);
 
     if (message.content && message.content.length > 0) {
       const idx = state.messages.length;
       state.messages.push({
         role: 'assistant',
         content: message.content,
-        provider: 'openai',
+        provider: providerId,
         model: state.model,
         persona: state.context ? state.persona : null,
         tokens: turnUsage ? (turnUsage.input + turnUsage.output) : null,
@@ -2841,7 +2875,7 @@ async function runOpenAITurn(key, useTools) {
   }
 
   if (iterations >= MAX_ITER) {
-    pushMaxIterMsg('openai');
+    pushMaxIterMsg(providerId);
   }
 
   applyConfabGuard(textMsgIdx, turnToolCount);
@@ -2855,19 +2889,20 @@ function openModal() {
   $('key_anthropic').value = state.keys.anthropic;
   $('key_openai').value = state.keys.openai;
   $('key_gemini').value = state.keys.gemini;
+  $('key_xai').value = state.keys.xai;
   updateKeyStatuses();
   $('modalBackdrop').classList.add('open');
 }
 function closeModal() { $('modalBackdrop').classList.remove('open'); }
 function updateKeyStatuses() {
-  ['anthropic', 'openai', 'gemini'].forEach(p => {
+  ['anthropic', 'openai', 'gemini', 'xai'].forEach(p => {
     const el = $(`status_${p}`);
     if (state.keys[p]) { el.textContent = 'SET'; el.classList.add('set'); }
     else { el.textContent = 'NOT SET'; el.classList.remove('set'); }
   });
 }
 function saveKeys() {
-  ['anthropic', 'openai', 'gemini'].forEach(p => {
+  ['anthropic', 'openai', 'gemini', 'xai'].forEach(p => {
     const val = $(`key_${p}`).value.trim();
     state.keys[p] = val;
     if (val) localStorage.setItem(`gt_key_${p}`, val);
