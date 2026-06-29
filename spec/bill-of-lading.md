@@ -13,7 +13,7 @@ file_role: primitive-draft
 
 ## Abstract
 
-The Bill of Lading (BoL) is the **execution contract** that wraps a [Packing Slip](packing-slip.md) for transport into the Continuum-meta overlay. It binds the sender (the synthetic agent), the transport layer, and the request -- and attests that the call has passed [GRACE Contract](../grace-contract.md) constraint checks.
+The Bill of Lading (BoL) is the **execution contract** that wraps a [Packing Slip](packing-slip.md) for transport into the Continuum-meta overlay. It binds the sender (the synthetic agent), the transport layer, and the request -- and attests that the call has passed [GRACE Contract](https://github.com/jdieselny/ecr-wg/blob/main/specs/grace-contract.md) constraint checks.
 
 If the Packing Slip is the cargo, the Bill of Lading is the signed manifest that travels with it.
 
@@ -28,7 +28,7 @@ If the Packing Slip is the cargo, the Bill of Lading is the signed manifest that
 A conformant Bill of Lading MUST contain:
 
 - **`packing_slip_hash`** -- the hash from the wrapped Packing Slip. Forms the cache key for overlay lookup.
-- **`sender_signature`** -- signature by the synthetic agent's enrollment key (see [Truth Root](../truth-root.md)).
+- **`sender_signature`** -- signature by the synthetic agent's enrollment key (see [Truth Root](https://github.com/jdieselny/ecr-wg/blob/main/specs/truth-root.md)).
 - **`grace_attestation`** -- assertion that the call's GRACE fields are populated and CONSTRAINTS have been checked. Signed.
 - **`routing_intent`** -- populated GRACE ROUTING field. May be a specific node, a capability requirement, or `any-overlay`.
 - **`return_path`** -- how the response should be returned to the originating synth. May be a callback endpoint, a queue reference, or a streaming session token.
@@ -48,7 +48,7 @@ A conformant Bill of Lading MUST contain:
 
 ## Open problems
 
-1. **Signature scheme.** Tied to the [Truth Root](../truth-root.md) decision. Open.
+1. **Signature scheme.** Tied to the [Truth Root](https://github.com/jdieselny/ecr-wg/blob/main/specs/truth-root.md) decision. Open.
 2. **Wire format.** JSON-LD, CBOR, protobuf -- open.
 3. **Return-path schema.** What return mechanisms are first-class (HTTP callback, message queue, streaming, polling)? Open.
 4. **BoL revocation mid-flight.** Can a sender revoke a BoL that is already in the overlay's processing queue? If yes, how? Open.
