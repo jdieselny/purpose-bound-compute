@@ -1228,6 +1228,7 @@ PREVIOUS_PROVENANCE: Dima // 2026-05-21T18:11:52.349Z
         <option value="companion">PRESET // COMPANION (minimal)</option>
         <option value="custom">PRESET // CUSTOM</option>
       </select>
+      <button class="clear-context-btn" id="enrollFromStackBtn" title="Same as header ENROLL — companion → truthroot + PEM on disk">ENROLL COMPANION</button>
       <button class="clear-context-btn" id="clearContextBtn">CLEAR STACK</button>
     </div>
     <div class="layer-grid">
@@ -1250,7 +1251,9 @@ PREVIOUS_PROVENANCE: Dima // 2026-05-21T18:11:52.349Z
     </div>
     <textarea class="context-textarea" id="contextTextarea" style="display:none" aria-hidden="true"></textarea>
     <div class="context-hint">
-      Private keys never enter the browser. Layers compose into the system prompt sent on every API call.
+      L1–L4 is the system prompt stack (loads with chat — not a separate “boot agent” step).
+      <strong>ENROLL COMPANION</strong> writes the thumbprint to truthroot (same as header ENROLL).
+      Private keys stay on disk via the bridge — never in the browser, never in git.
       Simulated routing badges below — production router is OPEN on the COSA map.
     </div>
   </div>
@@ -1259,7 +1262,7 @@ PREVIOUS_PROVENANCE: Dima // 2026-05-21T18:11:52.349Z
 <div class="chat-container" id="chat">
   <div class="empty-state" id="emptyState">
     <span class="big">SYNTH <span class="accent">DESK</span></span>
-    <div class="tagline">HTTP of AI // first commands // wake the lattice</div>
+    <div class="tagline">three phases // boot · work · SESSION_CLOSE</div>
     <div class="matrix-grid" aria-label="Orientation command wallpaper">
       <div class="mx-col">
         <div class="mx-h">01 // Boot</div>
@@ -1267,25 +1270,25 @@ PREVIOUS_PROVENANCE: Dima // 2026-05-21T18:11:52.349Z
         <p class="mx-cmd"><span class="dim"># from repo root</span></p>
         <p class="mx-cmd"><code>boot continuum from ./purpose-bound-compute</code></p>
         <p class="mx-cmd"><code>GET /health</code> <span class="dim">→ ONLINE</span></p>
-        <p class="mx-cmd"><code>KEYS</code> <span class="dim">→ set ≥1 provider</span></p>
+        <p class="mx-cmd"><code>KEYS</code> <span class="dim">→ set ≥1 provider (local only)</span></p>
         <p class="mx-cmd"><code>TOOLS: ON</code> <span class="dim">when bridge green</span></p>
       </div>
       <div class="mx-col">
-        <div class="mx-h">02 // Identity</div>
-        <p class="mx-cmd"><code>self enroll</code> <span class="dim">// ENROLL</span></p>
-        <p class="mx-cmd"><code>fill L1–L4</code> <span class="dim">or COMPANION preset</span></p>
+        <div class="mx-h">02 // Work</div>
+        <p class="mx-cmd"><code>self enroll</code> <span class="dim">// ENROLL COMPANION</span></p>
         <p class="mx-cmd"><code>list agents</code> <span class="dim">→ truthroot</span></p>
         <p class="mx-cmd"><code>create job --assign &lt;id&gt;</code></p>
         <p class="mx-cmd"><code>open pbc-shift</code> <span class="dim">// clock in</span></p>
+        <p class="mx-cmd"><code>hop provider</code> <span class="dim">same body</span></p>
         <p class="mx-cmd egg" title="Mr. Anderson…">there is no spoon — only receipts</p>
       </div>
       <div class="mx-col">
-        <div class="mx-h">03 // Rituals</div>
+        <div class="mx-h">03 // Close</div>
         <p class="mx-cmd"><code>list rituals</code> <span class="dim">// help.html</span></p>
         <p class="mx-cmd"><code>GET /pbc/weather</code> <span class="dim">// L5 strip</span></p>
         <p class="mx-cmd"><code>verify receipts offline</code></p>
-        <p class="mx-cmd"><code>hop provider</code> <span class="dim">same body</span></p>
         <p class="mx-cmd"><code>fail closed</code> <span class="dim">always</span></p>
+        <p class="mx-cmd"><code>SESSION_CLOSE</code> <span class="dim">// mic drop</span></p>
         <p class="mx-cmd egg">// agent smith is already inside the app that codes the app</p>
       </div>
     </div>
@@ -3259,6 +3262,8 @@ for (const k of LAYER_KEYS) {
 }
 
 $('enrollBtn').addEventListener('click', openEnrollModal);
+const enrollFromStackBtn = $('enrollFromStackBtn');
+if (enrollFromStackBtn) enrollFromStackBtn.addEventListener('click', openEnrollModal);
 $('enrollClose').addEventListener('click', closeEnrollModal);
 $('enrollSubmit').addEventListener('click', enrollCompanion);
 
