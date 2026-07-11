@@ -1,70 +1,79 @@
-# Purpose-Bound Compute (PBC) Specification
+# Purpose-Bound Compute (PBC)
 
-**Status:** Draft Spec · Version 0.1
-**Authors:** Justin Kintzele & Iman Schrock
+**Status:** Draft spec + public dual-terminal demos  
+**Normative glossary:** [DEFINITIONS.md](DEFINITIONS.md)  
+**Architecture map:** [demo/COSA_MAP.md](demo/COSA_MAP.md)
 
-> The receipt is how a stateless future trusts a stateful past, whether that future is the next agent or the auditor.
+> The receipt is how a stateless future trusts a stateful past — whether that future is the next agent or the auditor.
 
-## The Core Concept: One Primitive, Two Trust Boundaries
+## Dual demos (start here)
 
-The core claim of the Purpose-Bound Compute (PBC) protocol is that a signed, offline-verifiable receipt binding `{intent/authorization, the work that ran, evidence}` is the same object whether the two parties who do not share state are:
-*   **Boundary A:** Two agents across a context-window boundary (handoff).
-*   **Boundary B:** An operator and an auditor across an administrative boundary (audit).
+| Demo | Pattern | Analogy | What you learn |
+|------|---------|---------|----------------|
+| [**Synth Desk**](demo/synth-desk/) | **Companion** | HTTP of AI | Define a synth from L1–L4 context, enroll thumbprint, hop providers |
+| [**PBC Shift**](demo/pbc-shift/) | **Worker** | HTTPS of AI | Clock in, thumbprint-routed jobs, signed work, clock out, offline verify |
 
-Neither receiver can trust the sender's mutable memory or logs. Both must verify state from a portable, immutable artifact.
+### Quickstart
 
----
+Requires **Node.js 18+** and local API keys (Synth Desk only).
 
-### Boundary A: Agent Context-Handoff (Pre-Token-Wall Protocol)
-In this boundary, execution state is preserved across agent boundaries (such as a model swap, a token reset, or a cold boot):
-*   **Intent Receipt:** Captures what the agent is about to do plus the target success condition (pre-action).
-*   **Result Receipt:** Captures what happened plus a content digest (post-action).
-*   **Handoff:** The ordered, linked hash chain. The next agent reconstructs the execution state by verifying the chain, rather than relying on recency-biased chat memory.
-*   **Fail-Closed Behavior:** If the chain is broken, the next agent detects exactly what was left unfinished and halts execution.
-*   **EP Mapping:** Implemented via `EP-RECEIPT-v1` (JCS/Ed25519), ordered-chain linking (`prev_context_hash`), and the offline verifier running as the boot check.
+```bash
+git clone https://github.com/jdieselny/purpose-bound-compute.git
+cd purpose-bound-compute
+node demo/shared/bridge/bridge.js
+```
 
----
+- Synth Desk: open `demo/synth-desk/index.html`
+- PBC Shift: open `demo/pbc-shift/index.html` → **Init demo worker + job** on first run
 
-### Boundary B: Distributed-Trace Audit (COSA L2/L3)
-In this boundary, execution trace events are audited across distributed systems without conflating layers:
-1.  **Physical Synchronization:** Precision Time Protocol (PTP) and GPS physical synchronization shrink clock skew (though clock skew is never zero).
-2.  **Logical Synchronization:** Hybrid Logical Clocks (HLC) establish a causal order robust to residual physical clock skew.
-3.  **Audit Layer (EP):** Hash-chaining trace events via `EP-TIME-ATTESTATION-v1`. Causal order is proven via cryptographic linkage rather than wall-clock times, enabling offline auditability without strict clock synchronization. PTP serves where wire or billing timing is required.
+Data lands in `./.pbc-data/` (gitignored). Copy it to a second machine and run [offline verification](demo/VERIFY.md) — no private keys required on machine B.
 
----
+## Core claim
 
-### Why It Is One Primitive
-The trust-boundary requirements are isomorphic:
-*   "The next agent does not trust memory."
-*   "The auditor does not trust operator logs."
-*   "The relying party does not operate the runtime."
+A signed, offline-verifiable receipt binding `{intent/authorization, work performed, evidence}` is the **same primitive** whether the trust boundary is agent handoff or operator audit. See the spec sections below for boundaries A and B.
 
-In all three cases, the receipt functions as the portable proof that safely crosses the boundary.
+## What we do not claim
 
----
+- Receipt integrity ≠ physical curtailment or meter honesty
+- Demo bridge is **localhost-only** — not production security
+- Simulated routing badges ≠ production intent router (OPEN on COSA map)
 
-## Technical Benchmarks (COSA-Side)
-PBC measures execution efficiency using precise metrics rather than qualitative statements:
-*   **Clock Skew:** p50, p99, and maximum skew across nodes.
-*   **Out-of-Order Rates:** Out-of-order span rate measured before and after HLC integration.
-*   **Attestation Overhead:** Latency (ms) and size overhead (bytes per receipt).
-*   **Six-Sigma Boundary:** Bounds physical skew to keep out-of-order events below the defined target threshold.
+## Documentation
 
----
+| Type | Link |
+|------|------|
+| Brochure | [docs/brochure.md](docs/brochure.md) |
+| Spec sheet | [docs/spec-sheet.md](docs/spec-sheet.md) |
+| Quick-start | [docs/quick-start-guide.md](docs/quick-start-guide.md) |
+| User guide | [docs/user-guide.md](docs/user-guide.md) |
+| Synth Desk help | [demo/synth-desk/help.html](demo/synth-desk/help.html) |
+| AFT diagram | [docs/diagrams/aft-truth-overlay.html](docs/diagrams/aft-truth-overlay.html) |
 
-## Status and Roadmaps
+## Optional external verifier
 
-### Already Shipped (EP Lane)
-*   `EP-RECEIPT-v1` (JCS/Ed25519 signed receipt format).
-*   JCS/Ed25519 offline verifier (functionally identical across JS, Python, and Go implementations).
-*   Ordered-chain specification.
-*   `EP-TIME-ATTESTATION-v1` schema.
-*   Conformance test vectors.
+[ecr-wg](https://github.com/jdieselny/ecr-wg) hosts an independent cleanroom Rust verifier (161/161 conformance vectors) for `EP-RECEIPT-v1`. This repo stands alone without it; the demos use the operational v4 work-signature plane.
 
-### New to Build (PBC Lane)
-*   **Handoff-Receipt Wrapper:** The `intent()` and `result()` interfaces plus the `boot-verify` step.
-*   **Trace-Event Adapter:** Bridges system traces to the cryptographic receipt schema.
-*   **"Laptop-on-fire" Demo:** Reference demonstration showing a cold boot from Git, memory injection, verification of the receipt chain, and execution resumption.
+## Spec lane
+
+- [spec/](spec/) — packing slip, bill of lading, and related PBC artifacts
+- [handoff/](handoff/) — Composer execution plans (operator-reviewed before push)
 
 ---
+
+## Boundary A: Agent context-handoff
+
+- **Intent receipt** — pre-action claim + success condition
+- **Result receipt** — post-action digest
+- **Handoff chain** — ordered linkage; next party verifies, not remembers
+- **Fail-closed** — broken chain halts execution
+
+## Boundary B: Distributed-trace audit
+
+Physical sync (PTP/GPS) + logical sync (HLC) + cryptographic audit (`EP-TIME-ATTESTATION-v1` class).
+
+## Shipped vs building
+
+**Shipped (EP lane):** `EP-RECEIPT-v1`, JCS/Ed25519 verifiers, conformance vectors  
+**Building (PBC lane):** handoff wrapper, trace adapter, public demos (this repo)
+
 *AFT: AI-generated-user-reviewed-pending*

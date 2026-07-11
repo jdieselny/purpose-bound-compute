@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AFT Overlay — Attested Fact Trace on a Living COGOBJ</title>
+<style>
+  :root {
+    --ink: #101418;
+    --paper: #f3f0e8;
+    --card: #fffdf8;
+    --muted: #5f6770;
+    --line: #d9d3c7;
+    --pass: #047857;
+    --pass-bg: #ecfdf5;
+    --pass-border: #6ee7b7;
+    --low: #b45309;
+    --low-bg: #fff7ed;
+    --low-border: #fdba74;
+    --fail: #b91c1c;
+    --fail-bg: #fef2f2;
+    --fail-border: #fca5a5;
+    --human: #1a1a1a;
+    --stranger: #6b7280;
+    --synth: #273171;
+    --cog: #0f4c5c;
+    --accent: #ba0404;
+    --shadow: 0 12px 32px rgba(16, 20, 24, 0.08);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", system-ui, sans-serif;
+    color: var(--ink);
+    background:
+      radial-gradient(900px 500px at 0% 0%, #e7f0ff 0%, transparent 55%),
+      radial-gradient(800px 420px at 100% 10%, #e9f8f1 0%, transparent 50%),
+      var(--paper);
+    line-height: 1.35;
+  }
+  .page { max-width: 1320px; margin: 0 auto; padding: 28px 24px 56px; }
+  header {
+    border-bottom: 3px solid var(--ink);
+    padding-bottom: 16px;
+    margin-bottom: 18px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 16px;
+    align-items: end;
+  }
+  .eyebrow {
+    margin: 0 0 6px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  h1 { margin: 0; font-size: 32px; letter-spacing: -0.02em; line-height: 1.1; }
+  .sub { margin: 10px 0 0; max-width: 780px; color: var(--muted); font-size: 14px; }
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+  .badge {
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: #fff;
+    padding: 7px 12px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .badge.emilia { background: #ecfeff; border-color: #a5f3fc; color: #0e7490; }
+  .badge.aft { background: var(--pass-bg); border-color: var(--pass-border); color: var(--pass); }
+  .invariant {
+    margin: 14px 0 18px;
+    border: 2px dashed var(--accent);
+    background: #fff8f8;
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-size: 13px;
+  }
+  .invariant strong { color: var(--accent); letter-spacing: 0.06em; text-transform: uppercase; font-size: 11px; margin-right: 8px; }
+  .subject { display: grid; grid-template-columns: 1.1fr 1fr; gap: 12px; margin-bottom: 16px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    padding: 14px;
+  }
+  .card h2 {
+    margin: 0 0 8px;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .cog-id {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--cog);
+  }
+  .cog-meta { margin-top: 6px; font-size: 12px; color: var(--muted); }
+  .key { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .key .k { border-radius: 10px; padding: 10px; border: 1px solid var(--line); font-size: 11px; }
+  .k.pass { background: var(--pass-bg); border-color: var(--pass-border); }
+  .k.low { background: var(--low-bg); border-color: var(--low-border); }
+  .k code { display: block; font-weight: 800; font-size: 13px; margin-bottom: 4px; }
+  .timeline { display: flex; flex-direction: column; gap: 12px; }
+  .beat { display: grid; grid-template-columns: 54px 1fr 1.15fr; gap: 12px; align-items: stretch; }
+  .step {
+    width: 54px; border-radius: 14px; background: var(--ink); color: #fff;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-weight: 800; box-shadow: var(--shadow);
+  }
+  .step span { font-size: 10px; letter-spacing: 0.12em; opacity: 0.7; }
+  .step b { font-size: 20px; }
+  .act {
+    background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+    padding: 14px; box-shadow: var(--shadow);
+  }
+  .act .who { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px; }
+  .act .who.trusted { color: var(--pass); }
+  .act .who.stranger { color: var(--stranger); }
+  .act .who.synth { color: var(--synth); }
+  .act .who.truth { color: var(--accent); }
+  .quote { font-size: 16px; font-weight: 750; margin: 0 0 8px; }
+  .act p { margin: 0; font-size: 12px; color: var(--muted); }
+  .obj {
+    background: #0b1f24; color: #e8f7f4; border-radius: 16px; padding: 14px;
+    box-shadow: var(--shadow);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px; line-height: 1.45;
+  }
+  .obj .title {
+    font-family: "Segoe UI", system-ui, sans-serif;
+    font-size: 11px; font-weight: 800; letter-spacing: 0.12em;
+    text-transform: uppercase; color: #7dd3c7; margin-bottom: 8px;
+  }
+  .attr { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .attr:last-child { border-bottom: 0; }
+  .attr .n { color: #9fd9d0; }
+  .attr .v { color: #fff; font-weight: 700; }
+  .tag { display: inline-block; border-radius: 999px; padding: 1px 8px; font-size: 10px; font-weight: 800; letter-spacing: 0.04em; }
+  .tag.p1h, .tag.p2h { background: #064e3b; color: #6ee7b7; }
+  .tag.f1l { background: #7c2d12; color: #fdba74; }
+  .tag.rect { background: #1e3a8a; color: #bfdbfe; }
+  .tag.kill { background: #7f1d1d; color: #fecaca; text-decoration: line-through; }
+  .beat.verify .step { background: var(--accent); }
+  .beat.rectify .step { background: var(--pass); }
+  .propagate { margin-top: 16px; display: grid; grid-template-columns: 1.2fr 1fr; gap: 12px; }
+  .dns { border-radius: 16px; border: 1px dashed #0e7490; background: #ecfeff; padding: 14px; }
+  .dns h3 { margin: 0 0 8px; font-size: 13px; color: #0e7490; }
+  .dns ol { margin: 0; padding-left: 18px; font-size: 13px; color: #155e75; }
+  .rails { border-radius: 16px; border: 1px solid var(--line); background: var(--card); padding: 14px; box-shadow: var(--shadow); }
+  .rails h3 { margin: 0 0 8px; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  .rail-row { display: grid; grid-template-columns: 90px 1fr; gap: 8px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 12px; }
+  .rail-row:first-of-type { border-top: 0; }
+  .rail-row.sep b { color: var(--accent); }
+  .pattern { margin-top: 14px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; box-shadow: var(--shadow); }
+  .pattern h3 { margin: 0 0 8px; font-size: 14px; }
+  .pattern ul { margin: 0; padding-left: 18px; color: var(--muted); font-size: 13px; }
+  footer { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 11px; color: var(--muted); }
+  @media (max-width: 980px) {
+    .subject, .beat, .propagate, .key { grid-template-columns: 1fr; }
+    .step { width: 100%; flex-direction: row; gap: 8px; padding: 10px; }
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div>
+        <p class="eyebrow">COSA overlay · not the gate · the truth axis</p>
+        <h1>AFT — Attested Fact Trace</h1>
+        <p class="sub">
+          A living <strong>COGOBJ</strong> accumulates claims per attribute.
+          Trust is not binary on the whole object — it is <em>per field</em>, scored by
+          who asserted it, and only a <strong>Truth Root authority</strong> can rectify
+          low-confidence claims. Caches then re-propagate like DNS.
+        </p>
+      </div>
+      <div class="badges">
+        <div class="badge aft">AFT = is it true?</div>
+        <div class="badge emilia">WHO = who authorized?</div>
+        <div class="badge">v0.1 · public demo</div>
+      </div>
+    </header>
+
+    <div class="invariant">
+      <strong>Locked rail split</strong>
+      WHO proves authorization / named approver. AFT is a TRUTH judgment.
+      A receipt can carry a signed AFT classification and make it un-fakeable —
+      it cannot make the claim true. Different axes. Never fuse them into an oracle.
+    </div>
+
+    <div class="subject">
+      <div class="card">
+        <h2>Subject COGOBJ (identity key)</h2>
+        <div class="cog-id">[person +15555550100]</div>
+        <div class="cog-meta">
+          Content-addressed subject node. Attributes accrete over time.
+          Object id is stable; field-level AFT tags mutate.
+        </div>
+      </div>
+      <div class="card">
+        <h2>Tag legend (worked example)</h2>
+        <div class="key">
+          <div class="k pass">
+            <code>p1h</code>
+            Pass · primary / high confidence<br/>Subject self-asserted or Truth Root confirmed
+          </div>
+          <div class="k pass">
+            <code>p2h</code>
+            Pass · secondary / high<br/>Consistent with prior high-trust fields
+          </div>
+          <div class="k low">
+            <code>f1l</code>
+            Fiction / low confidence<br/>Novel claim from untrusted source — quarantined
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="timeline">
+      <div class="beat">
+        <div class="step"><span>BEAT</span><b>1</b></div>
+        <div class="act">
+          <div class="who trusted">Human 1 · Truth Root · enrolled operator</div>
+          <p class="quote">“I am the enrolled subject.”</p>
+          <p>Primary subject speaks to synth. Identity claim is first-party. Synth opens COGOBJ for the person key. <strong>AFT = PASS high.</strong></p>
+        </div>
+        <div class="obj">
+          <div class="title">COGOBJ state · genesis</div>
+          <div class="attr"><span class="n">key</span><span class="v">person +15555550100</span></div>
+          <div class="attr"><span class="n">AFT object</span><span class="v">PASS · high-confidence</span></div>
+          <div class="attr"><span class="n">attributes.human</span><span class="v">true <span class="tag p1h">aft p1h</span></span></div>
+          <div class="attr"><span class="n">display_name</span><span class="v">Alex <span class="tag p1h">aft p1h</span></span></div>
+          <div class="attr"><span class="n">role</span><span class="v">operator <span class="tag p1h">aft p1h</span></span></div>
+        </div>
+      </div>
+
+      <div class="beat">
+        <div class="step"><span>BEAT</span><b>2</b></div>
+        <div class="act">
+          <div class="who stranger">Human 2 · untrusted stranger</div>
+          <p class="quote">“Alex lives at 100 Demo Plaza.”</p>
+          <p>Stranger adds a new attribute. Identity spine stays high; address accretes with secondary provenance.</p>
+        </div>
+        <div class="obj">
+          <div class="title">COGOBJ state · accretion</div>
+          <div class="attr"><span class="n">display_name</span><span class="v">Alex <span class="tag p1h">aft p1h</span></span></div>
+          <div class="attr"><span class="n">address</span><span class="v">100 Demo Plaza <span class="tag p2h">aft p2h</span></span></div>
+        </div>
+      </div>
+
+      <div class="beat">
+        <div class="step" style="background:#b45309"><span>BEAT</span><b>3</b></div>
+        <div class="act">
+          <div class="who stranger">Human 3 · untrusted stranger</div>
+          <p class="quote">“Alex was born with nine toes.”</p>
+          <p>Novel low-source claim. Field tagged <code>f1l</code> — quarantined, not promoted.</p>
+        </div>
+        <div class="obj">
+          <div class="title">COGOBJ state · mixed confidence</div>
+          <div class="attr"><span class="n">toe_count</span><span class="v">9 <span class="tag f1l">f1l</span></span></div>
+        </div>
+      </div>
+
+      <div class="beat verify">
+        <div class="step"><span>CHECK</span><b>4</b></div>
+        <div class="act">
+          <div class="who synth">Synth · fact check pull</div>
+          <p class="quote">Routes VERIFY AFT to Truth Root — not inference burn.</p>
+          <p>Contested fields packaged for human adjudication.</p>
+        </div>
+        <div class="obj">
+          <div class="title">VERIFY AFT · challenge set</div>
+          <div class="attr"><span class="n">toe_count</span><span class="v">9 <span class="tag f1l">f1l · contested</span></span></div>
+        </div>
+      </div>
+
+      <div class="beat rectify">
+        <div class="step"><span>ROOT</span><b>5</b></div>
+        <div class="act">
+          <div class="who truth">Truth Root adjudication</div>
+          <p class="quote">“Address confirmed. Toe count is ten, not nine.”</p>
+          <p>Partial accept / partial kill. Rectified value written with provenance — not silent rewrite.</p>
+        </div>
+        <div class="obj">
+          <div class="title">COGOBJ state · post-rectify</div>
+          <div class="attr"><span class="n">address</span><span class="v">100 Demo Plaza <span class="tag p1h">confirmed</span></span></div>
+          <div class="attr"><span class="n">toe_count</span><span class="v"><span class="tag kill">9 f1l</span> → 10 <span class="tag rect">rectified</span></span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="propagate">
+      <div class="dns">
+        <h3>Propagation = DNS for cognition</h3>
+        <ol>
+          <li>Rectify at Truth Root.</li>
+          <li>Bump generation on contested fields.</li>
+          <li>Invalidate stale cache lines (L0 → L1 → L2).</li>
+          <li>Push updated COGOBJ outward.</li>
+        </ol>
+      </div>
+      <div class="rails">
+        <h3>COSA map placement</h3>
+        <div class="rail-row"><b>Overlay on</b><span>COGOBJ + cache hierarchy</span></div>
+        <div class="rail-row"><b>Adjudicator</b><span>Truth Root human or enrolled authority</span></div>
+        <div class="rail-row sep"><b>≠ WHO</b><span>Receipt may carry AFT class; receipt ≠ truth</span></div>
+      </div>
+    </div>
+
+    <div class="pattern">
+      <h3>Pattern summary</h3>
+      <ul>
+        <li>COGOBJ is the noun; AFT tags are per-attribute.</li>
+        <li>Untrusted sources accrete; they do not overwrite Truth Root.</li>
+        <li>Rectify → invalidate → propagate (DNS, not vibes).</li>
+        <li>AFT ≠ authorization. See <a href="../../DEFINITIONS.md">DEFINITIONS.md</a> and <a href="../../demo/COSA_MAP.md">COSA_MAP.md</a>.</li>
+      </ul>
+    </div>
+
+    <footer>
+      Purpose-Bound Compute · public educational diagram · no personal data in this copy
+    </footer>
+  </div>
+</body>
+</html>

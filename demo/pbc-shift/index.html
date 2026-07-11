@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PBC Shift — Workers</title>
+<style>
+  :root {
+    --blue-steel: #7AAEC8;
+    --blue-steel-dim: #4a6e80;
+    --chrome-1: #2a2d31;
+    --chrome-2: #1a1c1f;
+    --bg-deep: #0e0f11;
+    --bg-panel: #15171a;
+    --bg-elevated: #1d2024;
+    --text-primary: #e4e6ea;
+    --text-dim: #8a8e94;
+    --text-muted: #5a5e64;
+    --accent-warm: #d4a87e;
+    --accent-error: #c87a7a;
+    --accent-success: #8ec3a0;
+    --border: #2a2d31;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", system-ui, sans-serif;
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    min-height: 100vh;
+    line-height: 1.5;
+  }
+  .app { max-width: 760px; margin: 0 auto; padding: 24px 20px 40px; }
+  header {
+    border: 1px solid var(--border);
+    background: linear-gradient(90deg, var(--bg-panel) 0%, var(--chrome-2) 100%);
+    padding: 16px 20px;
+    margin-bottom: 12px;
+  }
+  header h1 {
+    font-size: 14px;
+    letter-spacing: 0.12em;
+    font-weight: 600;
+    color: var(--blue-steel);
+    margin-bottom: 8px;
+  }
+  .meta { font-size: 12px; color: var(--text-dim); }
+  .meta span { margin-right: 16px; }
+  .callout {
+    border: 1px solid var(--blue-steel-dim);
+    background: rgba(122, 174, 200, 0.06);
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.55;
+  }
+  .callout strong { color: var(--text-primary); display: block; margin-bottom: 6px; letter-spacing: 0.04em; }
+  .callout a { color: var(--blue-steel); }
+  .footer-note { font-size: 11px; color: var(--text-muted); margin-top: 16px; text-align: center; }
+  .lamp { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+  .lamp.online { background: var(--accent-success); box-shadow: 0 0 6px var(--accent-success); }
+  .lamp.offline { background: var(--accent-error); }
+  .screen { display: none; }
+  .screen.active { display: block; }
+  .agent-tile {
+    display: flex; align-items: center; gap: 14px;
+    padding: 16px 18px; border: 1px solid var(--border);
+    background: var(--bg-panel); cursor: pointer; margin-bottom: 8px;
+  }
+  .agent-tile:hover { border-color: var(--blue-steel-dim); }
+  .monogram {
+    width: 44px; height: 44px; background: var(--bg-elevated);
+    border: 1px solid var(--blue-steel-dim);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 18px; color: var(--blue-steel);
+  }
+  .agent-name { font-size: 15px; font-weight: 600; }
+  .agent-sub { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+  .shift-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 18px; border: 1px solid var(--border);
+    background: var(--bg-panel); margin-bottom: 12px;
+  }
+  .shift-title { font-size: 14px; letter-spacing: 0.08em; color: var(--blue-steel); font-weight: 600; }
+  .back-btn {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text-dim); font-size: 11px; padding: 4px 10px; cursor: pointer;
+  }
+  .panel { border: 1px solid var(--border); background: var(--bg-panel); margin-bottom: 12px; }
+  .panel-head {
+    padding: 10px 16px; font-size: 11px; letter-spacing: 0.06em;
+    color: var(--text-dim); border-bottom: 1px solid var(--border);
+    background: var(--bg-elevated);
+  }
+  .panel-body { padding: 14px 16px; font-size: 13px; }
+  .thumbprint {
+    font-family: "Cascadia Code", "Consolas", monospace;
+    font-size: 11px; color: var(--text-dim); word-break: break-all; margin-bottom: 12px;
+  }
+  .session-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .status-badge { font-size: 11px; padding: 2px 8px; border: 1px solid var(--border); color: var(--text-muted); }
+  .status-badge.on-shift { color: var(--accent-success); border-color: var(--accent-success); }
+  .job-row { padding: 10px 0; border-bottom: 1px solid var(--border); cursor: pointer; }
+  .job-row:last-child { border-bottom: none; }
+  .job-row.selected { color: var(--accent-warm); }
+  .job-id { font-weight: 600; font-size: 13px; }
+  .job-instruction {
+    margin-top: 10px; padding: 10px 12px; background: var(--bg-elevated);
+    font-size: 12px; color: var(--text-dim); border-left: 2px solid var(--blue-steel-dim);
+    display: none;
+  }
+  .job-instruction.visible { display: block; }
+  .empty { color: var(--text-muted); font-size: 12px; font-style: italic; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  button.action {
+    background: var(--bg-elevated); border: 1px solid var(--border);
+    color: var(--text-primary); font-size: 12px; padding: 8px 14px;
+    cursor: pointer; letter-spacing: 0.03em;
+  }
+  button.action:hover:not(:disabled) { border-color: var(--blue-steel); color: var(--blue-steel); }
+  button.action:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.action.primary { border-color: var(--blue-steel-dim); }
+  #log {
+    font-family: "Cascadia Code", "Consolas", monospace;
+    font-size: 11px; color: var(--text-dim);
+    max-height: 180px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;
+  }
+  .log-line { margin-bottom: 4px; }
+  .log-line.ok { color: var(--accent-success); }
+  .log-line.err { color: var(--accent-error); }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>PBC SHIFT</h1>
+    <div class="meta">
+      <span id="data-root">data: —</span>
+      <span id="agent-count">workers: —</span>
+      <span><span class="lamp offline" id="bridge-lamp"></span>bridge: <span id="bridge-status">CHECKING</span></span>
+    </div>
+  </header>
+
+  <div class="callout" id="map-callout">
+    <strong>PBC Shift — Workers (HTTPS of AI)</strong>
+    Workers clock in, take only jobs assigned to their thumbprint, do work, sign,
+    clock out, and leave receipts (replaceable duty units).
+    Not enrolled → not listed. Not assigned to you → not in inbox.
+    Create/register synths first in <a href="../synth-desk/index.html">Synth Desk</a>.
+    Map: truthroot · shift discipline · WHO receipts · offline verify.
+    <a href="../COSA_MAP.md">COSA_MAP.md</a> · <a href="../../DEFINITIONS.md">DEFINITIONS.md</a>
+  </div>
+
+  <div id="screen-a" class="screen active">
+    <div id="agent-list"></div>
+    <div class="actions" style="margin-top:12px">
+      <button class="action" id="btn-init-demo">Init demo worker + job</button>
+      <button class="action" id="btn-refresh">Refresh</button>
+    </div>
+  </div>
+
+  <div id="screen-b" class="screen">
+    <div class="shift-header">
+      <span class="shift-title" id="shift-agent-name">—</span>
+      <button class="back-btn" id="btn-back">← WORKERS</button>
+    </div>
+    <div class="panel">
+      <div class="panel-head">IDENTITY</div>
+      <div class="panel-body">
+        <div class="thumbprint" id="shift-pubkey">public_key: —</div>
+        <div class="session-row">
+          <button class="action primary" id="btn-clock-in">CLOCK IN</button>
+          <span class="status-badge" id="shift-status">OFF SHIFT</span>
+          <span style="font-size:12px;color:var(--text-dim)">session: <span id="session-id">—</span></span>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head">INBOX (assigned to your thumbprint)</div>
+      <div class="panel-body" id="inbox-list"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head">ACTIONS</div>
+      <div class="panel-body">
+        <div class="actions">
+          <button class="action" id="btn-write-hello">Write work</button>
+          <button class="action" id="btn-sign-work">Sign work</button>
+          <button class="action primary" id="btn-complete">Complete → done/</button>
+          <button class="action" id="btn-clock-out">CLOCK OUT</button>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head">LOG</div>
+      <div class="panel-body"><div id="log"></div></div>
+    </div>
+  </div>
+
+  <p class="footer-note">Integrity of a receipt ≠ physical truth of the world. Private keys never enter the browser.</p>
+</div>
+
+<script>
+const BRIDGE_URL = 'http://127.0.0.1:7878';
+let pbcPaths = null;
+let bridgeOnline = false;
+let agents = [];
+let selectedAgent = null;
+let sessionId = null;
+let selectedJob = null;
+let jobsCompleted = [];
+
+function joinPath(base, rel) {
+  const sep = base.includes('\\') ? '\\' : '/';
+  return base.replace(/[\\/]+$/, '') + sep + rel.replace(/^[\\/]+/, '').replace(/\//g, sep);
+}
+
+function agentTimecardsDir(agent) {
+  return joinPath(pbcPaths.timecards, agent.agent_id);
+}
+function jobOpenPath(jobId) {
+  return joinPath(pbcPaths.inboxOpen, jobId + '.json');
+}
+function jobDonePath(jobId) {
+  return joinPath(pbcPaths.inboxDone, jobId + '.json');
+}
+function workProductPath(agent, job) {
+  if (job && job.work_path) {
+    const wp = job.work_path;
+    if (/^[A-Za-z]:[\\/]/.test(wp) || wp.startsWith('/')) return wp;
+    return joinPath(pbcPaths.root, wp);
+  }
+  return joinPath(pbcPaths.inboxDone, 'hello-' + agent.agent_id + '.txt');
+}
+
+function workProductBody(agent, job) {
+  const ts = new Date().toISOString();
+  if (job && job.work_body) {
+    return String(job.work_body)
+      .replace(/\{\{UTC\}\}/g, ts)
+      .replace(/\{\{AGENT\}\}/g, agent.display_name)
+      .replace(/\{\{AGENT_ID\}\}/g, agent.agent_id)
+      .replace(/\{\{JOB_ID\}\}/g, job.job_id || '');
+  }
+  return 'HELLO FROM ' + agent.display_name.toUpperCase() + ' AT ' + ts + '\n';
+}
+
+async function bridgeGet(path) {
+  const res = await fetch(BRIDGE_URL + path);
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json();
+}
+
+async function bridgePost(path, body) {
+  const res = await fetch(BRIDGE_URL + path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body || {})
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'HTTP ' + res.status);
+  return data;
+}
+
+function log(msg, kind) {
+  const el = document.getElementById('log');
+  const line = document.createElement('div');
+  line.className = 'log-line' + (kind ? ' ' + kind : '');
+  line.textContent = new Date().toISOString() + '  ' + msg;
+  el.prepend(line);
+}
+
+function punchFilename(ts, suffix) {
+  return ts.replace(/:/g, '-').replace(/\./g, '-') + suffix;
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+async function loadPaths() {
+  const data = await bridgeGet('/pbc/paths');
+  pbcPaths = data.paths;
+  document.getElementById('data-root').textContent = 'data: ' + pbcPaths.root;
+}
+
+async function checkBridge() {
+  const lamp = document.getElementById('bridge-lamp');
+  const status = document.getElementById('bridge-status');
+  try {
+    await bridgeGet('/health');
+    bridgeOnline = true;
+    lamp.className = 'lamp online';
+    status.textContent = 'ONLINE';
+    if (!pbcPaths) await loadPaths();
+  } catch (e) {
+    bridgeOnline = false;
+    lamp.className = 'lamp offline';
+    status.textContent = 'OFFLINE';
+  }
+}
+
+async function loadAgents() {
+  const list = document.getElementById('agent-list');
+  if (!bridgeOnline) {
+    list.innerHTML = '<p class="empty">Bridge offline — start: <code>node demo/shared/bridge/bridge.js</code></p>';
+    return;
+  }
+  try {
+    const data = await bridgePost('/fs/read', { path: pbcPaths.truthroot });
+    const root = JSON.parse(data.content);
+    agents = (root.agents || []).filter(a => a.synth_type !== 'companion');
+    if (agents.length === 0) {
+      agents = (root.agents || []);
+    }
+    document.getElementById('agent-count').textContent = 'workers: ' + agents.length + ' enrolled';
+    if (agents.length === 0) {
+      list.innerHTML = '<p class="empty">No workers in truthroot. Enroll a worker in Synth Desk or click Init demo.</p>';
+      return;
+    }
+    list.innerHTML = agents.map(a => `
+      <div class="agent-tile" data-agent-id="${a.agent_id}">
+        <div class="monogram">${(a.display_name || a.agent_id).charAt(0)}</div>
+        <div>
+          <div class="agent-name">${a.display_name || a.agent_id}</div>
+          <div class="agent-sub">${a.agent_id} · ${a.synth_type || 'worker'} · enrolled</div>
+        </div>
+      </div>
+    `).join('');
+    list.querySelectorAll('.agent-tile').forEach(tile => {
+      tile.addEventListener('click', () => openShift(tile.dataset.agentId));
+    });
+  } catch (e) {
+    list.innerHTML = '<p class="empty">Failed to load truthroot: ' + e.message + '</p>';
+  }
+}
+
+async function loadInbox() {
+  const inbox = document.getElementById('inbox-list');
+  if (!selectedAgent) return;
+  try {
+    const listData = await bridgePost('/fs/list', { path: pbcPaths.inboxOpen });
+    const files = (listData.entries || []).filter(e => e.type === 'file' && e.name.endsWith('.json'));
+    const jobs = [];
+    for (const f of files) {
+      try {
+        const read = await bridgePost('/fs/read', { path: joinPath(pbcPaths.inboxOpen, f.name) });
+        const job = JSON.parse(read.content);
+        if (job.assigned_to === selectedAgent.public_key) jobs.push(job);
+      } catch (_) { /* skip */ }
+    }
+    if (jobs.length === 0) {
+      inbox.innerHTML = '<p class="empty">No open jobs assigned to your thumbprint.</p>';
+      selectedJob = null;
+      return;
+    }
+    selectedJob = jobs[0];
+    inbox.innerHTML = jobs.map((j, idx) => `
+      <div class="job-row${idx === 0 ? ' selected' : ''}" data-job-id="${j.job_id}">
+        <div class="job-id">• ${j.job_id}</div>
+        <div class="job-instruction${idx === 0 ? ' visible' : ''}">${j.instruction}</div>
+      </div>
+    `).join('');
+    inbox.querySelectorAll('.job-row').forEach(row => {
+      row.addEventListener('click', () => {
+        const job = jobs.find(j => j.job_id === row.dataset.jobId);
+        if (!job) return;
+        selectedJob = job;
+        inbox.querySelectorAll('.job-row').forEach(r => {
+          r.classList.toggle('selected', r === row);
+          const instr = r.querySelector('.job-instruction');
+          if (instr) instr.classList.toggle('visible', r === row);
+        });
+        log('Selected job ' + job.job_id);
+      });
+    });
+  } catch (e) {
+    inbox.innerHTML = '<p class="empty">Inbox error: ' + e.message + '</p>';
+  }
+}
+
+function openShift(agentId) {
+  selectedAgent = agents.find(a => a.agent_id === agentId);
+  if (!selectedAgent) return;
+  sessionId = null;
+  jobsCompleted = [];
+  selectedJob = null;
+  document.getElementById('shift-agent-name').textContent = (selectedAgent.display_name || agentId).toUpperCase();
+  document.getElementById('shift-pubkey').textContent = 'public_key: ' + selectedAgent.public_key;
+  document.getElementById('session-id').textContent = '—';
+  document.getElementById('shift-status').textContent = 'OFF SHIFT';
+  document.getElementById('shift-status').className = 'status-badge';
+  document.getElementById('log').innerHTML = '';
+  showScreen('screen-b');
+  log('Shift opened for ' + selectedAgent.display_name);
+  loadInbox();
+}
+
+async function clockIn() {
+  if (!selectedAgent) return;
+  sessionId = crypto.randomUUID();
+  const ts = new Date().toISOString();
+  const punch = { event: 'clock_in', agent_id: selectedAgent.agent_id, public_key: selectedAgent.public_key, session_id: sessionId, ts };
+  const fname = punchFilename(ts, '_in.json');
+  const punchPath = joinPath(agentTimecardsDir(selectedAgent), fname);
+  try {
+    await bridgePost('/fs/write', { path: punchPath, content: JSON.stringify(punch, null, 2) });
+    log('Wrote clock-in punch: ' + fname);
+    await bridgePost('/identity/sign-work', { workPath: punchPath, signerName: selectedAgent.display_name, keyPath: selectedAgent.key_path });
+    log('Signed clock-in punch', 'ok');
+    document.getElementById('session-id').textContent = sessionId.slice(0, 8) + '…';
+    const badge = document.getElementById('shift-status');
+    badge.textContent = 'ON SHIFT';
+    badge.className = 'status-badge on-shift';
+  } catch (e) {
+    log('Clock-in failed: ' + e.message, 'err');
+  }
+}
+
+async function writeHello() {
+  if (!selectedAgent || !selectedJob) {
+    log('Select a job first', 'err');
+    return;
+  }
+  const path = workProductPath(selectedAgent, selectedJob);
+  const body = workProductBody(selectedAgent, selectedJob);
+  try {
+    await bridgePost('/fs/write', { path, content: body.endsWith('\n') ? body : body + '\n' });
+    log('Wrote ' + path, 'ok');
+  } catch (e) {
+    log('Write work failed: ' + e.message, 'err');
+  }
+}
+
+async function signWork() {
+  if (!selectedAgent || !selectedJob) {
+    log('Select a job first', 'err');
+    return;
+  }
+  const path = workProductPath(selectedAgent, selectedJob);
+  try {
+    await bridgePost('/identity/sign-work', { workPath: path, signerName: selectedAgent.display_name, keyPath: selectedAgent.key_path });
+    log('Signed work product', 'ok');
+  } catch (e) {
+    log('Sign work failed: ' + e.message, 'err');
+  }
+}
+
+async function fileExists(path) {
+  try {
+    await bridgePost('/fs/read', { path });
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+async function completeJob() {
+  if (!selectedAgent || !selectedJob) {
+    log('No job selected', 'err');
+    return;
+  }
+  const workPath = workProductPath(selectedAgent, selectedJob);
+  const jobId = selectedJob.job_id;
+  const openPath = jobOpenPath(jobId);
+  const donePath = jobDonePath(jobId);
+  if (!(await fileExists(workPath))) {
+    log('Work product missing — write it first', 'err');
+    return;
+  }
+  await signWork();
+  try {
+    if (await fileExists(openPath)) {
+      const read = await bridgePost('/fs/read', { path: openPath });
+      await bridgePost('/fs/write', { path: donePath, content: read.content });
+      try {
+        await bridgePost('/fs/delete', { path: openPath });
+      } catch (_) {
+        await bridgePost('/shell/exec', { command: 'Remove-Item -LiteralPath "' + openPath + '" -Force' });
+      }
+      log('Moved job to done/: ' + jobId, 'ok');
+      if (!jobsCompleted.includes(jobId)) jobsCompleted.push(jobId);
+    } else {
+      log('Job already in done/', 'ok');
+      if (!jobsCompleted.includes(jobId)) jobsCompleted.push(jobId);
+    }
+    await loadInbox();
+  } catch (e) {
+    log('Complete failed: ' + e.message, 'err');
+  }
+}
+
+async function clockOut() {
+  if (!selectedAgent || !sessionId) {
+    log('Clock out requires an active session', 'err');
+    return;
+  }
+  const ts = new Date().toISOString();
+  const punch = {
+    event: 'clock_out',
+    agent_id: selectedAgent.agent_id,
+    public_key: selectedAgent.public_key,
+    session_id: sessionId,
+    ts,
+    jobs_completed: jobsCompleted.slice()
+  };
+  const fname = punchFilename(ts, '_out.json');
+  const punchPath = joinPath(agentTimecardsDir(selectedAgent), fname);
+  try {
+    await bridgePost('/fs/write', { path: punchPath, content: JSON.stringify(punch, null, 2) });
+    log('Wrote clock-out punch: ' + fname);
+    await bridgePost('/identity/sign-work', { workPath: punchPath, signerName: selectedAgent.display_name, keyPath: selectedAgent.key_path });
+    log('Signed clock-out — SHIFT CLOSED', 'ok');
+    document.getElementById('shift-status').textContent = 'SHIFT CLOSED';
+    document.getElementById('shift-status').className = 'status-badge';
+    sessionId = null;
+    setTimeout(() => { showScreen('screen-a'); loadAgents(); }, 800);
+  } catch (e) {
+    log('Clock-out failed: ' + e.message, 'err');
+  }
+}
+
+document.getElementById('btn-back').addEventListener('click', () => { showScreen('screen-a'); loadAgents(); });
+document.getElementById('btn-clock-in').addEventListener('click', clockIn);
+document.getElementById('btn-write-hello').addEventListener('click', writeHello);
+document.getElementById('btn-sign-work').addEventListener('click', signWork);
+document.getElementById('btn-complete').addEventListener('click', completeJob);
+document.getElementById('btn-clock-out').addEventListener('click', clockOut);
+document.getElementById('btn-refresh').addEventListener('click', async () => { await checkBridge(); await loadAgents(); });
+document.getElementById('btn-init-demo').addEventListener('click', async () => {
+  try {
+    const r = await bridgePost('/pbc/init-demo');
+    log('Init: ' + (r.initialized ? 'demo-worker + demo-hello' : r.reason), r.initialized ? 'ok' : '');
+    await loadAgents();
+  } catch (e) {
+    alert('Init failed: ' + e.message);
+  }
+});
+
+(async function init() {
+  await checkBridge();
+  await loadAgents();
+  setInterval(checkBridge, 10000);
+})();
+</script>
+</body>
+</html>

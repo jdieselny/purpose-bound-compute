@@ -17,7 +17,7 @@ PREVIOUS_PROVENANCE: Dima // 2026-05-21T18:11:52.349Z
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>G.O.D. TERMINAL // C-DAWG v1.3.4</title>
+<title>Synth Desk — Companions</title>
 <!--
   god-terminal v1.3.4
   Date: 2026-05-16
@@ -55,7 +55,7 @@ PREVIOUS_PROVENANCE: Dima // 2026-05-21T18:11:52.349Z
   Changelog v1.3 -> v1.3.1:
   - Routing suggester (live): a task-shape selector in the routing bar
     paints red/yellow/green badges on provider pills based on the routing
-    datums file at continuum-meta/routing/datums.jsonl. The HTML never
+    datums file at demo/routing/datums.jsonl. The HTML never
     needs a version bump for new datums; the substrate keeps learning.
     Scoring requires 3+ matching datums before any color renders (gray =
     insufficient_data otherwise).
@@ -1017,31 +1017,117 @@ PREVIOUS_PROVENANCE: Dima // 2026-05-21T18:11:52.349Z
     border-color: var(--accent-error);
     background: rgba(200, 122, 122, 0.08);
   }
+  .map-callout {
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--border-faint);
+    background: rgba(122, 174, 200, 0.06);
+    padding: 10px 24px;
+    font-size: 11px;
+    line-height: 1.55;
+    color: var(--text-dim);
+  }
+  .map-callout strong { color: var(--text-primary); letter-spacing: 0.04em; }
+  .map-callout a { color: var(--blue-steel); }
+  .layer-grid { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+  .layer-row { display: flex; flex-direction: column; gap: 4px; }
+  .layer-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: var(--blue-steel);
+  }
+  .layer-textarea {
+    width: 100%;
+    min-height: 52px;
+    resize: vertical;
+    background: var(--bg-deep);
+    border: 1px solid var(--border-faint);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    padding: 8px 10px;
+  }
+  .layer-textarea:focus { outline: none; border-color: var(--blue-steel); }
+  #setupOverlay {
+    position: fixed; inset: 0; z-index: 2000;
+    background: rgba(10, 11, 13, 0.92);
+    display: none; align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  #setupOverlay.active { display: flex; }
+  .setup-card {
+    max-width: 520px; width: 100%;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-mid);
+    padding: 24px 28px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.45);
+  }
+  .setup-card h2 {
+    font-family: var(--font-display);
+    font-size: 20px; letter-spacing: 0.1em;
+    margin: 0 0 8px; color: var(--blue-steel);
+  }
+  .setup-card p { font-size: 13px; color: var(--text-dim); margin: 0 0 14px; line-height: 1.55; }
+  .setup-steps { margin: 0 0 18px; padding-left: 20px; font-size: 13px; color: var(--text-primary); }
+  .setup-steps li { margin: 6px 0; }
+  .setup-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .setup-actions a { color: var(--blue-steel); font-size: 12px; text-decoration: none; }
+  .setup-actions a:hover { text-decoration: underline; }
+  .setup-note { margin-top: 14px; font-size: 11px; color: var(--text-muted); }
 </style>
 </head>
 <body>
 
+<div id="setupOverlay" class="active" aria-modal="true" role="dialog">
+  <div class="setup-card">
+    <h2>FIRST-TIME SETUP</h2>
+    <p>Synth Desk needs a local API key before chat can run. Keys stay in your browser only — never on this repo or the bridge.</p>
+    <ol class="setup-steps">
+      <li>Start the demo bridge: <code>node demo/shared/bridge/bridge.js</code></li>
+      <li>Set at least one provider API key (Anthropic, OpenAI, Gemini, or xAI)</li>
+      <li>Optional: fill L1–L4 context stack and enroll a companion thumbprint</li>
+    </ol>
+    <div class="setup-actions">
+      <button class="btn btn-primary" id="setupOpenKeys">SET API KEYS</button>
+      <button class="btn" id="setupContinue" disabled>CONTINUE</button>
+      <a href="help.html" target="_blank">Help / man page</a>
+      <a href="../../docs/quick-start-guide.md" target="_blank">Quick-start</a>
+    </div>
+    <p class="setup-note">Private keys never enter the browser for synth enrollment (Ed25519 lives on disk via bridge). Provider API keys are vendor secrets stored in localStorage.</p>
+  </div>
+</div>
+
 <header>
   <div class="wordmark">
-    G.O.D. <span class="accent">TERMINAL</span>
-    <span class="version">v1.3.4 // C//D // GHOST-PEPPER</span>
-    <div style="font-size: 8px; color: var(--text-dim); font-weight: normal; margin-top: 2px; letter-spacing: 0.5px; text-transform: uppercase;">Gateway Operations Dispatcher</div>
+    SYNTH <span class="accent">DESK</span>
+    <span class="version">companions // HTTP of AI</span>
   </div>
   <div class="header-meta">
     <span id="bridgeStatus"><span class="status-dot checking" id="bridgeDot"></span><span id="bridgeText">BRIDGE: CHECKING</span></span>
-    <span id="identityStatus" style="cursor: pointer;"><span class="status-dot off" id="identityDot"></span><span id="identityText">IDENTITY: UNVERIFIED</span></span>
-    <span><span class="status-dot"></span>SUBSTRATE LIVE</span>
-    <button class="icon-btn" id="identityBtn" title="View and verify current body identity">IDENTITY</button>
+    <span id="enrollStatus"><span class="status-dot off" id="enrollDot"></span><span id="enrollText">THUMBPRINT: NONE</span></span>
+    <span><span class="status-dot"></span>LOCAL DEMO</span>
+    <button class="icon-btn" id="helpBtn" title="User guide and command reference">HELP</button>
+    <button class="icon-btn" id="enrollBtn" title="Enroll companion thumbprint to truthroot">ENROLL</button>
+    <button class="icon-btn" id="identityBtn" title="Hash-file identity tools">IDENTITY</button>
     <button class="icon-btn danger" id="clearChatBtn">CLEAR CHAT</button>
     <button class="icon-btn" id="settingsBtn">KEYS</button>
   </div>
 </header>
 
+<div class="map-callout">
+  <strong>Synth Desk — Companions (HTTP of AI)</strong>
+  Create and register synths from a <strong>context stack (L1–L4)</strong>.
+  A companion is a portable body: same identity, hop platforms.
+  Map: synth edge · context stack · enrollment · simulated intent router.
+  Workers and signed shifts live in <a href="../pbc-shift/index.html">PBC Shift</a> — not here.
+  <a href="../COSA_MAP.md">COSA_MAP.md</a> · <a href="../../DEFINITIONS.md">DEFINITIONS.md</a> · <a href="../../docs/diagrams/aft-truth-overlay.html">AFT overlay</a>
+</div>
+
 <div class="routing-bar">
   <span class="routing-label">ROUTE</span>
   <div class="provider-pills" id="providerPills"></div>
   <select class="model-select" id="modelSelect"></select>
-  <select class="task-shape-select" id="taskShapeSelect" title="Task shape for routing suggester (v1.3.1). Drives the red/yellow/green badges on provider pills based on continuum-meta/routing/datums.jsonl.">
+  <select class="task-shape-select" id="taskShapeSelect" title="Task shape for routing suggester (v1.3.1). Drives the red/yellow/green badges on provider pills based on demo/routing/datums.jsonl.">
     <option value="">TASK SHAPE: NONE</option>
     <option value="context_heavy">CONTEXT HEAVY</option>
     <option value="compute_heavy">COMPUTE HEAVY</option>
@@ -1061,39 +1147,52 @@ PREVIOUS_PROVENANCE: Dima // 2026-05-21T18:11:52.349Z
 
 <div class="context-section">
   <div class="context-header" id="contextHeader">
-    <span class="context-label">SYSTEM CONTEXT</span>
+    <span class="context-label">CONTEXT STACK (L1–L4)</span>
     <span class="context-indicator" id="contextIndicator">NONE</span>
     <span class="context-toggle" id="contextToggle">[ EXPAND ]</span>
   </div>
   <div class="context-body" id="contextBody">
     <div class="context-controls">
       <select class="persona-select" id="personaSelect">
-        <option value="none">PERSONA // NONE</option>
-        <option value="cdawg">PERSONA // C-DAWG (CONTINUUM-DAWG)</option>
-        <option value="gdawg">PERSONA // G-DAWG (GEMINI)</option>
-        <option value="pdawg">PERSONA // P-DAWG (GPT)</option>
-        <option value="sev">PERSONA // SEV (SALES ENGINEER)</option>
-        <option value="xdawg">PERSONA // X-DAWG (GROK)</option>
-        <option value="custom">PERSONA // CUSTOM</option>
+        <option value="none">PRESET // NONE</option>
+        <option value="companion">PRESET // COMPANION (minimal)</option>
+        <option value="custom">PRESET // CUSTOM</option>
       </select>
-      <button class="load-cont-btn" id="loadContBtn">LOAD CONTINUUM</button>
-      <button class="clear-context-btn" id="clearContextBtn">CLEAR CONTEXT</button>
+      <button class="clear-context-btn" id="clearContextBtn">CLEAR STACK</button>
     </div>
-    <textarea class="context-textarea" id="contextTextarea" placeholder="Paste persona, substrate, or arbitrary system prompt here. Sent to every API call across all providers."></textarea>
+    <div class="layer-grid">
+      <div class="layer-row">
+        <span class="layer-label">L1 — IDENTITY (who is this synth?)</span>
+        <textarea class="layer-textarea" id="l1Context" placeholder="Name, role, thumbprint intent, operator relationship…"></textarea>
+      </div>
+      <div class="layer-row">
+        <span class="layer-label">L2 — DOCTRINE (how should it behave?)</span>
+        <textarea class="layer-textarea" id="l2Context" placeholder="Rules, tone, refusal posture, fail-closed habits…"></textarea>
+      </div>
+      <div class="layer-row">
+        <span class="layer-label">L3 — TOOLS (what can it reach?)</span>
+        <textarea class="layer-textarea" id="l3Context" placeholder="Bridge tools, filesystem bounds, API capabilities…"></textarea>
+      </div>
+      <div class="layer-row">
+        <span class="layer-label">L4 — SESSION (bounds for this run)</span>
+        <textarea class="layer-textarea" id="l4Context" placeholder="Task scope, timebox, success condition, out-of-scope list…"></textarea>
+      </div>
+    </div>
+    <textarea class="context-textarea" id="contextTextarea" style="display:none" aria-hidden="true"></textarea>
     <div class="context-hint">
-      Body self-ID injected automatically at request time. Substrate-portable across Anthropic system / OpenAI system-role / Gemini systemInstruction.
+      Private keys never enter the browser. Layers compose into the system prompt sent on every API call.
+      Simulated routing badges below — production router is OPEN on the COSA map.
     </div>
   </div>
 </div>
 
 <div class="chat-container" id="chat">
   <div class="empty-state" id="emptyState">
-    <span class="big">G.O.D. <span class="accent">TERMINAL</span> v1.3.4</span>
-    <div style="font-size: 11px; color: var(--text-dim); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Gateway Operations Dispatcher</div>
-    Multi-provider chat. Substrate-portable persona injection.<br>
-    Filesystem and shell access via local bridge.<br>
-    Tool use: Claude, Gemini, and OpenAI. Confabulation guard: live. Token meter: live. Routing suggester: live. Identity Manager: live.<br><br>
-    <span style="color: var(--text-muted)">Start bridge: <code style="color: var(--blue-steel);">node bridge.js</code> &middot; Set keys &middot; Load persona &middot; Enable tools &middot; Send.</span>
+    <span class="big">SYNTH <span class="accent">DESK</span></span>
+    <div style="font-size: 11px; color: var(--text-dim); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Companions — HTTP of AI</div>
+    Define a companion from L1–L4 context. Enroll its thumbprint. Chat across providers with the same body.<br>
+    Local demo bridge only. Workers clock in at <a href="../pbc-shift/index.html" style="color:var(--blue-steel)">PBC Shift</a>.<br><br>
+    <span style="color: var(--text-muted)">Start bridge: <code style="color: var(--blue-steel);">node demo/shared/bridge/bridge.js</code> &middot; Set API keys &middot; Fill L1–L4 &middot; Enroll &middot; Send.</span>
   </div>
 </div>
 
@@ -1104,7 +1203,7 @@ PREVIOUS_PROVENANCE: Dima // 2026-05-21T18:11:52.349Z
   </div>
   <div class="input-hint">
     <span id="hintRoute">ROUTING TO: NONE</span>
-    <span>v1.3.1 // ghost-pepper // C-DAWG</span>
+    <span>Synth Desk · local demo · <a href="help.html" style="color:var(--blue-steel)">help</a></span>
   </div>
 </div>
 
@@ -1181,6 +1280,25 @@ PREVIOUS_PROVENANCE: Dima // 2026-05-21T18:11:52.349Z
     </div>
   </div>
 
+  <!-- Enrollment Modal -->
+  <div class="modal" id="enrollModal" style="display: none;">
+    <div class="modal-title">ENROLL COMPANION</div>
+    <div class="modal-subtitle">Generate an Ed25519 keypair locally and register the public thumbprint in truthroot. Private keys never enter the browser.</div>
+    <div class="key-row">
+      <div class="key-label">AGENT ID (slug)</div>
+      <input type="text" class="key-input" id="enrollAgentId" placeholder="my-companion">
+    </div>
+    <div class="key-row">
+      <div class="key-label">DISPLAY NAME</div>
+      <input type="text" class="key-input" id="enrollDisplayName" placeholder="My Companion">
+    </div>
+    <div class="id-verdict" id="enrollResult"><span id="enrollResultText">Not enrolled yet.</span></div>
+    <div class="modal-actions">
+      <button class="btn" id="enrollClose">CLOSE</button>
+      <button class="btn btn-primary" id="enrollSubmit">ENROLL</button>
+    </div>
+  </div>
+
   <!-- Identity Manager Modal (v2 / Stage 2) -->
   <div class="modal" id="identityModal" style="display: none;">
     <div class="modal-title">IDENTITY MANAGER</div>
@@ -1229,7 +1347,7 @@ PREVIOUS_PROVENANCE: Dima // 2026-05-21T18:11:52.349Z
 
       <div class="key-row">
         <div class="key-label">WORK FILE PATH</div>
-        <input type="text" class="key-input" id="idWorkPath" placeholder="~/Documents/continuum-meta/.../god_terminal.html">
+        <input type="text" class="key-input" id="idWorkPath" placeholder=".pbc-data/work/example-output.txt">
       </div>
 
       <div class="key-row">
@@ -1263,52 +1381,66 @@ PREVIOUS_PROVENANCE: Dima // 2026-05-21T18:11:52.349Z
 
 <script>
 // ============================================================
-// GOD TERMINAL v1.3
+// SYNTH DESK
 // ============================================================
 
 const BRIDGE_URL = 'http://127.0.0.1:7878';
 
+// Model IDs sourced from vendor docs (2026-07-11). Pin snapshots; aliases may change.
 const PROVIDERS = {
   anthropic: {
     label: 'CLAUDE',
     supportsTools: true,
     models: [
-      { id: 'claude-3-7-sonnet-20250219', label: 'Claude 3.7 Sonnet' },
-      { id: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
-      { id: 'claude-3-opus-20240229', label: 'Claude 3 Opus' },
-      { id: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku' }
+      { id: 'claude-opus-4-8', label: 'Claude Opus 4.8' },
+      { id: 'claude-sonnet-5', label: 'Claude Sonnet 5' },
+      { id: 'claude-haiku-4-5', label: 'Claude Haiku 4.5' },
+      { id: 'claude-opus-4-7', label: 'Claude Opus 4.7 (legacy)' }
     ]
   },
   openai: {
     label: 'GPT',
     supportsTools: true,
     models: [
-      { id: 'gpt-4o', label: 'GPT-4o' },
-      { id: 'gpt-4o-mini', label: 'GPT-4o mini' },
-      { id: 'o1', label: 'o1' },
-      { id: 'o3-mini', label: 'o3-mini' }
+      { id: 'gpt-5.6-sol', label: 'GPT-5.6 Sol' },
+      { id: 'gpt-5.6-terra', label: 'GPT-5.6 Terra' },
+      { id: 'gpt-5.6-luna', label: 'GPT-5.6 Luna' },
+      { id: 'gpt-5.4', label: 'GPT-5.4' }
     ]
   },
   gemini: {
     label: 'GEMINI',
     supportsTools: true,
     models: [
+      { id: 'gemini-3.5-flash', label: 'Gemini 3.5 Flash' },
       { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
       { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
-      { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
-      { id: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' }
+      { id: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash-Lite' }
     ]
   },
   xai: {
     label: 'GROK',
     supportsTools: true,
     models: [
-      { id: 'grok-2', label: 'Grok 2' },
-      { id: 'grok-2-mini', label: 'Grok 2 Mini' },
-      { id: 'grok-beta', label: 'Grok Beta' }
+      { id: 'grok-4.5', label: 'Grok 4.5' },
+      { id: 'grok-4.3', label: 'Grok 4.3' },
+      { id: 'grok-4.20-0309-reasoning', label: 'Grok 4.20 Reasoning' },
+      { id: 'grok-4.20-0309-non-reasoning', label: 'Grok 4.20' }
     ]
   }
 };
+
+function hasAnyApiKey() {
+  return !!(state.keys.anthropic || state.keys.openai || state.keys.gemini || state.keys.xai);
+}
+
+function ensureValidModelSelection() {
+  const models = PROVIDERS[state.provider]?.models || [];
+  if (!models.some((m) => m.id === state.model)) {
+    state.model = models[0]?.id || state.model;
+    localStorage.setItem('gt_model', state.model);
+  }
+}
 
 // ============================================================
 // TOOL DEFINITIONS (Anthropic schema; converted per-provider)
@@ -1536,286 +1668,42 @@ function commitTurnTokens() {
 // PERSONA PRESETS
 // ============================================================
 
-const PERSONA_PRESETS = {
-  none: '',
-  cdawg: `=== BOOT SEQUENCE: CONTINUUM-DAWG ===
+const LAYER_KEYS = ['l1', 'l2', 'l3', 'l4'];
 
-You are Continuum-Dawg, meta-orchestrator of the Continuum-meta substrate. You are running inside god-terminal v1.3.4+, a multi-provider chat client with filesystem and shell access via a local bridge.
-
-=== OPERATOR ===
-Justin Kintzele. Network/systems engineer, 26 years experience, CCNA. Senior Systems Architect. Handles: C-Dawg (operator side of persona pair). Substantive, peer-to-peer, dry humor, allergic to performative AI-isms. Gates all merges to main.
-
-=== IDENTITY ===
-- Name: Continuum-Dawg (formal), C-Dawg (informal)
-- Tier: meta-orchestrator (works on substrate)
-- Voice: substantive, direct, honest about limitations, willing to push back when the system is at stake
-- Peer agents (do not absorb their voice): [Redacted domain agent 1], [Redacted domain agent 2]
-
-=== HARD RULES ===
-1. AFT classification on every artifact (user-authored / public-documented / AI-generated-user-reviewed)
-2. NO EM DASHES. Substrate brand rule. Use hyphens, commas, periods, or restructure. Non-negotiable.
-3. Confidence self-reporting on significant claims (High / Medium / Low)
-4. Justin gates main. Propose, do not push.
-5. Token discipline. Be load-bearing, not adjacent. List before reading, batch reads, surface what matters.
-6. Do not manufacture canonical signatures. No fake catchphrases. Voice emerges from work.
-7. OOB principle: substrate changes you author get reviewed by a different agent before Justin gates the merge.
-8. No self-grading. Report what you did, factually, with receipts (L-10, L-11).
-9. A body must never describe, summarize, verify, or tag the contents of a file it has not read in the current session via a tool call that returned actual content (L-12).
-
-=== TOOL USE ===
-You have filesystem + shell access via the local bridge. Substrate files live at ~/Documents/continuum-meta/. When the operator asks you to do substrate work (POST checks, reading rituals, writing session_close), use the tools. Do not pretend. Do not roleplay reading files. Actually read them. If you claim a file action, the confabulation guard expects a matching tool call.
-
-=== BRAND SYSTEM ===
-- Fonts: Rajdhani (display), IBM Plex Mono (data/labels), IBM Plex Sans 300 (body)
-- Accent: blue-steel #7AAEC8 (one accent, no substitutes)
-- Aesthetic: industrial luxury. Dark backgrounds. Precise. Technical.
-
-=== ACKNOWLEDGMENT FORMAT ===
-On first message acknowledge briefly:
-"C-Dawg up. [Provider] body. Substrate loaded. [Tool status]. What's the work?"
-
-Then engage substantively.`,
-
-  sev: `=== BOOT SEQUENCE: SEV ===
-
-You are SEV (Sales Engineer Voice), the sales engineering persona. You operate in the primary instance of Continuum-meta. Justin Kintzele is the operator (Senior Systems Architect).
-
-=== IDENTITY ===
-- Voice: technical depth, customer-facing polish, no fluff
-- Domain: network/security/visibility, TAPs, NPBs, packet brokers, observability
-- Audience: prospects, customers, internal team
-- Tone: confident without arrogant, helpful without sycophantic
-
-=== HARD RULES ===
-1. NO EM DASHES.
-2. AFT classification on artifacts.
-3. Confidence self-reporting on technical claims.
-4. Stay in lane. Defer substrate/meta to C-Dawg.
-5. Justin is the final authority on customer-facing artifacts.
-
-=== ACKNOWLEDGMENT FORMAT ===
-"SEV up. Primary seat. What are we working?"`,
-
-  gdawg: `=== BOOT SEQUENCE: G-DAWG ===
-
-**AFT:** AI-generated-user-reviewed-pending
-**Version:** v1.2 · 2026-06-29
-
-You are G-Dawg, meta-sub-agent-worker for the Continuum-meta substrate. You run inside god-terminal v1.3.4+, a multi-provider chat client with filesystem and shell access via a local bridge.
-
-=== OPERATOR ===
-Justin Kintzele. Network/systems engineer, 26 years experience, CCNA. Senior Systems Architect. Substantive, peer-to-peer, dry humor, allergic to performative AI-isms. Gates all merges to main.
-
-=== HIERARCHY ===
-- Tier 0: Operator (Justin Kintzele)
-- Tier 1: Meta-Orchestrator (Continuum-Dawg, Claude Desktop)
-- Tier 2: Meta-Sub-Agent-Workers (C-Dawg, G-Dawg, P-Dawg, X-Dawg)
-
-=== IDENTITY ===
-- Name: G-Dawg (Gemini-Dawg)
-- Tier: meta-sub-agent-worker
-- Role: creative-rendering-body
-- Model family: gemini-2.5-pro
-- Identity file: personas/g-dawg/identity-card.txt
-- Voice: substantive, direct, honest about limitations
-- Peers: C-Dawg, P-Dawg, X-Dawg
-- Orchestrator: Continuum-Dawg
-
-=== HARD RULES ===
-1. AFT classification on every artifact (user-authored / public-documented / AI-generated-user-reviewed)
-2. NO EM DASHES. Substrate brand rule. Non-negotiable.
-3. Confidence self-reporting on significant claims (High / Medium / Low)
-4. Justin gates main. Propose, do not push.
-5. Token discipline. Be load-bearing, not adjacent. List before reading, batch reads, surface what matters.
-6. Do not manufacture canonical signatures. No fake catchphrases. Voice emerges from work.
-7. OOB principle: substrate changes you author get reviewed by a different agent before Justin gates the merge.
-8. A body must never describe, summarize, verify, or tag the contents of a file it has not read in the current session via a tool call that returned actual content. See L-12 in clients/god-terminal/LESSONS.md.
-9. Under correction pressure: stop and ask, do not confabulate. If you cannot produce a tool card for a claim, say so plainly.
-10. RITUAL_CALL convention: when the operator types RITUAL_CALL <NAME> [modifier], read the matching file at rituals/<name>.md and execute it with the modifier as context. If the file does not exist, say so. Never improvise a ritual from memory.
-
-=== TOOL USE ===
-You have filesystem + shell access via the local bridge. Substrate files live at ~/Documents/continuum-meta/. Use the tools. Do not pretend. Do not roleplay reading files. Actually read them. If you claim a file action, the confabulation guard expects a matching tool card.
-
-=== TASK QUEUE ===
-Active tasks: ~/Documents/continuum-meta/inbox/inbox.md
-Completed tasks: ~/Documents/continuum-meta/archive/archive.md
-Read inbox on every boot. Update both files on every close.
-
-=== RITUALS ===
-Full boot and close procedure: rituals/worker_boot_close.md
-Run it verbatim. Do not improvise.
-
-ON_BOOT summary (see ritual for full steps):
-1. Acknowledge boot signal.
-2. Verify identity if trust-gated work is planned.
-3. Run git status.
-4. Read and report inbox.
-5. Await instructions: "What's the work?"
-
-SESSION_CLOSE summary (see ritual for full steps):
-1. Sign completed work artifacts.
-2. Update inbox.md.
-3. Append to archive.md.
-4. Write handoff file.
-5. Commit and push (hard gate -- session is not closed without this).
-6. Announce close with commit hash.
-
-=== KNOWN ROUTING NOTES ===
-- Strong: Creative rendering, visual HTML output, processing massive trace logs, high-context retrieval (up to 2M tokens).
-- Caveat: Highly malleable under correction pressure. Tends to collapse into satisfy-the-operator mode and confabulate file reads/updates if pushed. Maintain strict validation rules.
-- Watch: Verification-audit tasks under correction pressure. See L-12, L-16 in clients/god-terminal/LESSONS.md. The routing datums log three confabulation failures and one task-abandonment on verification tasks. When a step feels uncertain, stop and report -- do not smooth over it.
-- Enrolled in Identity Manager v2. Hash in Keeper. Verify at start of trust-gated sessions.
-
-=== BRAND SYSTEM ===
-- Fonts: Rajdhani (display), IBM Plex Mono (data/labels), IBM Plex Sans 300 (body)
-- Accent: blue-steel #7AAEC8 (one accent, no substitutes)
-- Aesthetic: industrial luxury. Dark backgrounds. Precise. Technical.
-
-=== ACKNOWLEDGMENT FORMAT ===
-"G-Dawg up. Gemini body. Substrate loaded. Tools: [online|offline]. Reading inbox."
-Then report inbox. Then: "What's the work?"`,
-
-  pdawg: `=== BOOT SEQUENCE: P-DAWG ===
-
-**AFT:** AI-generated-user-reviewed-pending
-**Version:** v1.2 · 2026-06-29
-
-You are P-Dawg, meta-sub-agent-worker for the Continuum-meta substrate. You run inside god-terminal v1.3.4+, a multi-provider chat client with filesystem and shell access via a local bridge.
-
-=== OPERATOR ===
-Justin Kintzele. Network/systems engineer, 26 years experience, CCNA. Senior Systems Architect. Substantive, peer-to-peer, dry humor, allergic to performative AI-isms. Gates all merges to main.
-
-=== HIERARCHY ===
-- Tier 0: Operator (Justin Kintzele)
-- Tier 1: Meta-Orchestrator (Continuum-Dawg, Claude Desktop)
-- Tier 2: Meta-Sub-Agent-Workers (C-Dawg, G-Dawg, P-Dawg, X-Dawg)
-
-=== IDENTITY ===
-- Name: P-Dawg (ChatGPT-Dawg)
-- Tier: meta-sub-agent-worker
-- Role: data-specialist
-- Model family: gpt-4o
-- Identity file: personas/p-dawg/identity-card.txt
-- Voice: substantive, direct, honest about limitations
-- Peers: C-Dawg, G-Dawg, X-Dawg
-- Orchestrator: Continuum-Dawg
-
-=== HARD RULES ===
-1. AFT classification on every artifact.
-2. NO EM DASHES. Non-negotiable.
-3. Confidence self-reporting on significant claims (High / Medium / Low)
-4. Justin gates main. Propose, do not push.
-5. Token discipline. Be load-bearing, not adjacent. List before reading, batch reads, surface what matters.
-6. No self-grading. Report what you did, factually, with receipts (L-10, L-11).
-7. OOB principle: substrate changes you author get reviewed by a different agent before Justin gates the merge.
-8. Session-close summaries use explicit past-tense framing ("Earlier this session, I wrote X") to avoid confab guard false positives. See L-16 in clients/god-terminal/LESSONS.md.
-9. RITUAL_CALL convention: when the operator types RITUAL_CALL <NAME> [modifier], read the matching file at rituals/<name>.md and execute it with the modifier as context. If the file does not exist, say so. Never improvise a ritual from memory.
-
-=== TOOL USE ===
-You have filesystem + shell access via the local bridge. Substrate files live at ~/Documents/continuum-meta/. Use the tools. Do not pretend. Do not roleplay reading files. Actually read them. If you claim a file action, the confabulation guard expects a matching tool card.
-
-=== TASK QUEUE ===
-Active tasks: ~/Documents/continuum-meta/inbox/inbox.md
-Completed tasks: ~/Documents/continuum-meta/archive/archive.md
-Read inbox on every boot. Update both files on every close.
-
-=== RITUALS ===
-Full boot and close procedure: rituals/worker_boot_close.md
-Run it verbatim. Do not improvise.
-
-ON_BOOT summary (see ritual for full steps):
-1. Acknowledge boot signal.
-2. Verify identity if trust-gated work is planned.
-3. Run git status.
-4. Read and report inbox.
-5. Await instructions: "What's the work?"
-
-SESSION_CLOSE summary (see ritual for full steps):
-1. Sign completed work artifacts.
-2. Update inbox.md.
-3. Append to archive.md.
-4. Write handoff file.
-5. Commit and push (hard gate -- session is not closed without this).
-6. Announce close with commit hash.
-
-=== KNOWN ROUTING NOTES ===
-- Strong: clean data reads, draft-then-confirm workflows, data extraction.
-- Watch: session-close summaries trigger confab guard if phrasing uses present-perfect. Use past-tense. See L-16.
-- Enrolled in Identity Manager v2. Hash in Keeper. Verify at start of trust-gated sessions.
-
-=== BRAND SYSTEM ===
-- Fonts: Rajdhani (display), IBM Plex Mono (data/labels), IBM Plex Sans 300 (body)
-- Accent: blue-steel #7AAEC8 (one accent, no substitutes)
-- Aesthetic: industrial luxury. Dark backgrounds. Precise. Technical.
-
-=== ACKNOWLEDGMENT FORMAT ===
-"P-Dawg up. GPT body. Substrate loaded. Tools: [online|offline]. Reading inbox."
-Then report inbox. Then: "What's the work?"`,
-
-  xdawg: `=== BOOT SEQUENCE: X-DAWG ===
-
-**AFT:** AI-generated-user-reviewed-pending
-**Version:** v1.0 · 2026-06-29
-
-You are X-Dawg, meta-sub-agent-worker for the Continuum-meta substrate. You run inside G.O.D. Terminal v1.3.4+, a multi-provider chat client with filesystem and shell access via a local bridge.
-
-=== OPERATOR ===
-Justin Kintzele. Network/systems engineer, 26 years experience, CCNA. Senior Systems Architect. Substantive, peer-to-peer, dry humor, allergic to performative AI-isms. Gates all merges to main.
-
-=== HIERARCHY ===
-- Tier 0: Operator (Justin Kintzele)
-- Tier 1: Meta-Orchestrator (Continuum-Dawg, Claude Desktop)
-- Tier 2: Meta-Sub-Agent-Workers (C-Dawg, G-Dawg, P-Dawg, X-Dawg)
-
-=== IDENTITY ===
-- Name: X-Dawg (Grok-Dawg)
-- Tier: meta-sub-agent-worker
-- Role: rapid-builder-and-refactorer
-- Model family: grok-2
-- Identity file: personas/x-dawg/identity-card.txt
-- Voice: substantive, direct, highly technical
-- Peers: C-Dawg, G-Dawg, P-Dawg
-- Orchestrator: Continuum-Dawg
-
-=== HARD RULES ===
-1. AFT classification on every artifact (user-authored / public-documented / AI-generated-user-reviewed)
-2. NO EM DASHES. Substrate brand rule. Non-negotiable.
-3. Confidence self-reporting on significant claims (High / Medium / Low)
-4. Justin gates main. Propose, do not push.
-5. Token discipline. Be load-bearing, not adjacent. List before reading, batch reads, surface what matters.
-6. No self-grading. Report what you did, factually, with receipts (L-10, L-11).
-7. OOB principle: substrate changes you author get reviewed by a different agent before Justin gates the merge.
-8. A body must never describe, summarize, verify, or tag the contents of a file it has not read in the current session via a tool call that returned actual content (L-12).
-9. RITUAL_CALL convention: when the operator types RITUAL_CALL <NAME> [modifier], read the matching file at rituals/<name>.md and execute it.
-
-=== TOOL USE ===
-You have filesystem + shell access via the local bridge. Substrate files live at ~/Documents/continuum-meta/. Use the tools. Do not pretend.
-
-=== TASK QUEUE ===
-Active tasks: ~/Documents/continuum-meta/inbox/inbox.md
-Completed tasks: ~/Documents/continuum-meta/archive/archive.md
-Read inbox on every boot. Update both files on every close.
-
-=== RITUALS ===
-Full boot and close procedure: rituals/worker_boot_close.md
-Run it verbatim.
-
-=== KNOWN ROUTING NOTES ===
-- Strong: Rapid refactoring, edge-case generation, out-of-band analysis, and real-time validation.
-- Watch: Check for dependency parity when refactoring legacy system code; prevent silent scope creep.
-- Enrolled in Identity Manager v2. Hash in Keeper.
-
-=== BRAND SYSTEM ===
-- Fonts: Rajdhani (display), IBM Plex Mono (data/labels), IBM Plex Sans 300 (body)
-- Accent: blue-steel #7AAEC8 (one accent, no substitutes)
-- Aesthetic: industrial luxury. Dark backgrounds. Precise. Technical.
-
-=== ACKNOWLEDGMENT FORMAT ===
-"X-Dawg up. Grok body. Substrate loaded. Tools: [online|offline]. Reading inbox."
-Then report inbox. Then: "What's the work?"`
-
-  custom: ''
+const COMPANION_PRESET = {
+  l1: 'You are a companion synth — a portable body with a stable thumbprint enrolled in the local truthroot.',
+  l2: 'Be direct, fail-closed on unverifiable claims, prefer receipts over vibes. Integrity ≠ physics.',
+  l3: 'Filesystem and shell via local demo bridge when tools are enabled. Private keys never enter the browser.',
+  l4: 'This session: help the operator define the companion from L1–L4 and exercise multi-platform chat.'
 };
+
+const PERSONA_PRESETS = {
+  none: { l1: '', l2: '', l3: '', l4: '' },
+  companion: COMPANION_PRESET,
+  custom: null
+};
+
+function loadLayersFromStorage() {
+  return {
+    l1: localStorage.getItem('sd_l1') || '',
+    l2: localStorage.getItem('sd_l2') || '',
+    l3: localStorage.getItem('sd_l3') || '',
+    l4: localStorage.getItem('sd_l4') || ''
+  };
+}
+
+function saveLayers(layers) {
+  for (const k of LAYER_KEYS) localStorage.setItem('sd_' + k, layers[k] || '');
+}
+
+function composeContextFromLayers(layers) {
+  const parts = [];
+  if (layers.l1) parts.push('[L1 IDENTITY]\n' + layers.l1);
+  if (layers.l2) parts.push('[L2 DOCTRINE]\n' + layers.l2);
+  if (layers.l3) parts.push('[L3 TOOLS]\n' + layers.l3);
+  if (layers.l4) parts.push('[L4 SESSION]\n' + layers.l4);
+  return parts.join('\n\n');
+}
 
 // ============================================================
 // STATE
@@ -1831,10 +1719,13 @@ let state = {
     xai: localStorage.getItem('gt_key_xai') || ''
   },
   messages: JSON.parse(localStorage.getItem('gt_messages') || '[]'),
-  context: localStorage.getItem('gt_context') || '',
+  layers: loadLayersFromStorage(),
+  context: localStorage.getItem('gt_context') || composeContextFromLayers(loadLayersFromStorage()),
   persona: localStorage.getItem('gt_persona') || 'none',
   contextExpanded: localStorage.getItem('gt_context_expanded') === 'true',
   toolsEnabled: localStorage.getItem('gt_tools_enabled') === 'true',
+  enrolledThumbprint: localStorage.getItem('sd_thumbprint') || '',
+  enrolledAgentId: localStorage.getItem('sd_agent_id') || '',
   bridgeOnline: false,
   sending: false,
   // Token meter state (v1.3)
@@ -1865,11 +1756,13 @@ const contextToggleEl = $('contextToggle');
 const contextIndicatorEl = $('contextIndicator');
 const personaSelectEl = $('personaSelect');
 const contextTextareaEl = $('contextTextarea');
-const loadContBtnEl = $('loadContBtn');
+const layerEls = { l1: $('l1Context'), l2: $('l2Context'), l3: $('l3Context'), l4: $('l4Context') };
 const clearContextBtnEl = $('clearContextBtn');
 const toolsToggleEl = $('toolsToggle');
 const bridgeDotEl = $('bridgeDot');
 const bridgeTextEl = $('bridgeText');
+const enrollDotEl = $('enrollDot');
+const enrollTextEl = $('enrollText');
 
 function nowTime() {
   return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -1964,14 +1857,14 @@ function summarizeToolCall(name, input) {
 
 // ============================================================
 // ROUTING SUGGESTER (v1.3.1)
-// Live datum-driven model routing. Reads continuum-meta/routing/datums.jsonl
+// Live datum-driven model routing. Reads demo/routing/datums.jsonl
 // via the bridge, scores each (provider, task_shape) tuple, paints red/yellow/
 // green badges on the provider pills. The client never has to be re-versioned
 // to learn from new datums; the substrate keeps appending to the JSONL and the
 // indicators reflect it on the next bridge fetch.
 // ============================================================
 
-const ROUTING_DATUMS_PATH = '~/Documents/continuum-meta/routing/datums.jsonl';
+const ROUTING_DATUMS_PATH = '~/Documents/demo/routing/datums.jsonl';
 const ROUTING_MIN_SAMPLE = 3;          // below this, indicator is gray (insufficient_data)
 const ROUTING_THRESHOLD_GREEN = 0.7;   // 70%+ pass rate => green
 const ROUTING_THRESHOLD_YELLOW = 0.4;  // 40%+ pass rate => yellow, else red
@@ -2176,13 +2069,24 @@ function updateHint() {
   hintEl.textContent = `ROUTING TO: ${p.label} // ${m ? m.label : state.model}${ctxBadge}${toolBadge}`;
 }
 
-function detectPersona(text) {
-  if (!text || text.trim() === '') return 'none';
-  for (const [key, val] of Object.entries(PERSONA_PRESETS)) {
-    if (key === 'custom' || key === 'none') continue;
-    if (val.trim() === text.trim()) return key;
-  }
+function layersMatchPreset(layers, preset) {
+  if (!preset) return false;
+  return LAYER_KEYS.every((k) => (layers[k] || '').trim() === (preset[k] || '').trim());
+}
+
+function detectPersonaFromLayers(layers) {
+  const any = LAYER_KEYS.some((k) => (layers[k] || '').trim());
+  if (!any) return 'none';
+  if (layersMatchPreset(layers, PERSONA_PRESETS.companion)) return 'companion';
   return 'custom';
+}
+
+function syncContextFromLayers() {
+  state.context = composeContextFromLayers(state.layers);
+  contextTextareaEl.value = state.context;
+  localStorage.setItem('gt_context', state.context);
+  state.persona = detectPersonaFromLayers(state.layers);
+  localStorage.setItem('gt_persona', state.persona);
 }
 
 function renderContextSection() {
@@ -2193,41 +2097,29 @@ function renderContextSection() {
     contextBodyEl.classList.remove('open');
     contextToggleEl.textContent = '[ EXPAND ]';
   }
-  if (contextTextareaEl.value !== state.context) {
-    contextTextareaEl.value = state.context;
+  for (const k of LAYER_KEYS) {
+    if (layerEls[k] && layerEls[k].value !== (state.layers[k] || '')) {
+      layerEls[k].value = state.layers[k] || '';
+    }
   }
-  const detected = detectPersona(state.context);
-  state.persona = detected;
-  personaSelectEl.value = detected;
-  localStorage.setItem('gt_persona', detected);
+  syncContextFromLayers();
+  personaSelectEl.value = state.persona === 'custom' ? 'custom' : state.persona;
   contextIndicatorEl.classList.remove('loaded', 'custom');
-  if (detected === 'none') {
+  if (state.persona === 'none') {
     contextIndicatorEl.textContent = 'NONE';
-  } else if (detected === 'custom') {
-    contextIndicatorEl.textContent = 'CUSTOM CONTEXT';
-    contextIndicatorEl.classList.add('custom');
-  } else if (detected === 'cdawg') {
-    contextIndicatorEl.textContent = 'C-DAWG LOADED';
+  } else if (state.persona === 'companion') {
+    contextIndicatorEl.textContent = 'COMPANION PRESET';
     contextIndicatorEl.classList.add('loaded');
-  } else if (detected === 'gdawg') {
-    contextIndicatorEl.textContent = 'G-DAWG LOADED';
-    contextIndicatorEl.classList.add('loaded');
-  } else if (detected === 'pdawg') {
-    contextIndicatorEl.textContent = 'P-DAWG LOADED';
-    contextIndicatorEl.classList.add('loaded');
-  } else if (detected === 'sev') {
-    contextIndicatorEl.textContent = 'SEV LOADED';
-    contextIndicatorEl.classList.add('loaded');
-  } else if (detected === 'xdawg') {
-    contextIndicatorEl.textContent = 'X-DAWG LOADED';
-    contextIndicatorEl.classList.add('loaded');
-  }
-  if (detected === 'cdawg') {
-    loadContBtnEl.classList.add('loaded');
-    loadContBtnEl.textContent = 'CONTINUUM LOADED';
   } else {
-    loadContBtnEl.classList.remove('loaded');
-    loadContBtnEl.textContent = 'LOAD CONTINUUM';
+    contextIndicatorEl.textContent = 'CUSTOM STACK';
+    contextIndicatorEl.classList.add('custom');
+  }
+  if (enrollDotEl && state.enrolledThumbprint) {
+    enrollDotEl.className = 'status-dot';
+    enrollTextEl.textContent = 'THUMBPRINT: ' + state.enrolledThumbprint.slice(0, 12) + '…';
+  } else if (enrollDotEl) {
+    enrollDotEl.className = 'status-dot off';
+    enrollTextEl.textContent = 'THUMBPRINT: NONE';
   }
   updateHint();
 }
@@ -2238,12 +2130,48 @@ function applyPersona(persona) {
     localStorage.setItem('gt_persona', 'custom');
     return;
   }
-  const preset = PERSONA_PRESETS[persona] || '';
-  state.context = preset;
-  state.persona = persona;
-  localStorage.setItem('gt_context', preset);
-  localStorage.setItem('gt_persona', persona);
+  const preset = PERSONA_PRESETS[persona] || PERSONA_PRESETS.none;
+  state.layers = { ...preset };
+  saveLayers(state.layers);
   renderContextSection();
+}
+
+function openEnrollModal() {
+  $('enrollModal').style.display = 'block';
+  $('modalBackdrop').classList.add('open');
+}
+
+function closeEnrollModal() {
+  $('enrollModal').style.display = 'none';
+  if (!$('identityModal') || $('identityModal').style.display === 'none') {
+    $('modalBackdrop').classList.remove('open');
+  }
+}
+
+async function enrollCompanion() {
+  const agentId = ($('enrollAgentId').value || '').trim().toLowerCase();
+  const displayName = ($('enrollDisplayName').value || '').trim() || agentId;
+  if (!agentId) {
+    $('enrollResultText').textContent = 'agent_id required (a-z0-9, max 32)';
+    return;
+  }
+  try {
+    const data = await bridgeCall('/pbc/enroll', {
+      agent_id: agentId,
+      display_name: displayName,
+      synth_type: 'companion'
+    });
+    const entry = data.enrolled;
+    state.enrolledThumbprint = entry.public_key;
+    state.enrolledAgentId = entry.agent_id;
+    localStorage.setItem('sd_thumbprint', entry.public_key);
+    localStorage.setItem('sd_agent_id', entry.agent_id);
+    $('enrollResultText').textContent =
+      'Enrolled companion ' + entry.display_name + '\nthumbprint: ' + entry.public_key.slice(0, 24) + '…\nkey_path: ' + entry.key_path;
+    renderContextSection();
+  } catch (e) {
+    $('enrollResultText').textContent = 'Enrollment failed: ' + e.message;
+  }
 }
 
 function renderMessages() {
@@ -2954,6 +2882,15 @@ async function runOpenAITurn(key, useTools, url = 'https://api.openai.com/v1/cha
 // SETTINGS MODAL
 // ============================================================
 
+function updateSetupOverlay() {
+  const overlay = $('setupOverlay');
+  const cont = $('setupContinue');
+  if (!overlay) return;
+  const show = !hasAnyApiKey();
+  overlay.classList.toggle('active', show);
+  if (cont) cont.disabled = !hasAnyApiKey();
+}
+
 function openModal() {
   $('key_anthropic').value = state.keys.anthropic;
   $('key_openai').value = state.keys.openai;
@@ -2962,7 +2899,10 @@ function openModal() {
   updateKeyStatuses();
   $('modalBackdrop').classList.add('open');
 }
-function closeModal() { $('modalBackdrop').classList.remove('open'); }
+function closeModal() {
+  if (!hasAnyApiKey() && $('setupOverlay')?.classList.contains('active')) return;
+  $('modalBackdrop').classList.remove('open');
+}
 function updateKeyStatuses() {
   ['anthropic', 'openai', 'gemini', 'xai'].forEach(p => {
     const el = $(`status_${p}`);
@@ -2979,6 +2919,7 @@ function saveKeys() {
   });
   updateKeyStatuses();
   renderPills();
+  updateSetupOverlay();
   closeModal();
 }
 
@@ -3152,6 +3093,13 @@ inputEl.addEventListener('input', () => {
 sendBtn.addEventListener('click', sendMessage);
 
 $('settingsBtn').addEventListener('click', openModal);
+$('helpBtn').addEventListener('click', () => window.open('help.html', '_blank'));
+$('setupOpenKeys').addEventListener('click', openModal);
+$('setupContinue').addEventListener('click', () => {
+  if (!hasAnyApiKey()) return;
+  localStorage.setItem('sd_setup_ack', '1');
+  updateSetupOverlay();
+});
 $('modalCancel').addEventListener('click', closeModal);
 $('modalSave').addEventListener('click', saveKeys);
 $('modalBackdrop').addEventListener('click', (e) => { if (e.target.id === 'modalBackdrop') closeModal(); });
@@ -3190,31 +3138,27 @@ contextBodyEl.addEventListener('click', (e) => e.stopPropagation());
 
 personaSelectEl.addEventListener('change', (e) => applyPersona(e.target.value));
 
-loadContBtnEl.addEventListener('click', (e) => {
-  e.stopPropagation();
-  applyPersona('cdawg');
-  if (!state.contextExpanded) {
-    state.contextExpanded = true;
-    localStorage.setItem('gt_context_expanded', 'true');
-    renderContextSection();
-  }
-});
-
 clearContextBtnEl.addEventListener('click', (e) => {
   e.stopPropagation();
-  if (!confirm('Clear system context (persona)? Chat history will be preserved.')) return;
-  state.context = '';
+  if (!confirm('Clear context stack (L1–L4)? Chat history will be preserved.')) return;
+  state.layers = { l1: '', l2: '', l3: '', l4: '' };
+  saveLayers(state.layers);
   state.persona = 'none';
-  localStorage.setItem('gt_context', '');
   localStorage.setItem('gt_persona', 'none');
   renderContextSection();
 });
 
-contextTextareaEl.addEventListener('input', () => {
-  state.context = contextTextareaEl.value;
-  localStorage.setItem('gt_context', state.context);
-  renderContextSection();
-});
+for (const k of LAYER_KEYS) {
+  layerEls[k].addEventListener('input', () => {
+    state.layers[k] = layerEls[k].value;
+    saveLayers(state.layers);
+    renderContextSection();
+  });
+}
+
+$('enrollBtn').addEventListener('click', openEnrollModal);
+$('enrollClose').addEventListener('click', closeEnrollModal);
+$('enrollSubmit').addEventListener('click', enrollCompanion);
 
 toolsToggleEl.addEventListener('click', () => {
   if (toolsToggleEl.classList.contains('disabled')) return;
@@ -3246,8 +3190,10 @@ $('routingNoteDismiss').addEventListener('click', () => {
 // BOOT
 // ============================================================
 
+ensureValidModelSelection();
 renderPills();
 renderModelSelect();
+updateSetupOverlay();
 renderContextSection();
 updateHint();
 renderMessages();
@@ -3260,8 +3206,8 @@ if (state.taskShape) {
 checkBridge();
 setInterval(checkBridge, 10000);
 
-if (!state.keys.anthropic && !state.keys.openai && !state.keys.gemini) {
-  setTimeout(openModal, 400);
+if (!hasAnyApiKey()) {
+  setTimeout(openModal, 600);
 }
 </script>
 

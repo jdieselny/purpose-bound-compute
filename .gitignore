@@ -1,0 +1,9 @@
+.pbc-data/
+.env
+.env.*
+*.pem
+**/private-key.pem
+**/hmac_secret.key
+node_modules/
+.DS_Store
+Thumbs.db

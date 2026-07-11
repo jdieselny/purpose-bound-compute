@@ -13,11 +13,11 @@
  * +----------------------------------------------------------------------------+
  */
 /**
- * god-terminal bridge.js
- * v1.3.3 - 2026-05-16
+ * PBC demo bridge (Synth Desk + PBC Shift)
+ * v0.1.0 - 2026-07-11
  * AFT: AI-generated-user-reviewed-pending
  *
- * Localhost HTTP server that gives god-terminal HTML client access to
+ * Localhost HTTP server that gives PBC demo clients access to
  * filesystem + shell on the local machine. Localhost-only by hard bind.
  *
  * v1.3.3 changes from v1.3.2:
@@ -68,6 +68,33 @@ const PORT = parseInt(argValue('--port') || '7878', 10);
 const REQUIRE_CONFIRM = args.includes('--require-confirm');
 const SHELL_OVERRIDE = argValue('--shell'); // pwsh | cmd | bash
 const BIND_HOST = '127.0.0.1'; // hard-coded localhost. do not change.
+const PBC_DATA_DIR = path.resolve(
+  process.env.PBC_DATA_DIR || argValue('--data-dir') || path.join(process.cwd(), '.pbc-data')
+);
+
+function pbcPaths() {
+  const root = PBC_DATA_DIR;
+  return {
+    root,
+    truthroot: path.join(root, 'truthroot', 'known_agents.json'),
+    inboxOpen: path.join(root, 'inbox', 'open'),
+    inboxDone: path.join(root, 'inbox', 'done'),
+    timecards: path.join(root, 'timecards'),
+    receipts: path.join(root, 'receipts'),
+    keys: path.join(root, 'keys')
+  };
+}
+
+function ensurePbcDirs() {
+  const p = pbcPaths();
+  for (const dir of [p.root, path.dirname(p.truthroot), p.inboxOpen, p.inboxDone, p.timecards, p.receipts, p.keys]) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  if (!fs.existsSync(p.truthroot)) {
+    fs.writeFileSync(p.truthroot, JSON.stringify({ agents: [] }, null, 2) + '\n', 'utf-8');
+  }
+  return p;
+}
 
 // Determine which shell to use
 function detectShell() {
@@ -101,7 +128,7 @@ const C = {
 
 function banner() {
   console.log('');
-  console.log(`${C.bold}${C.blue}  GOD TERMINAL // BRIDGE${C.reset} ${C.dim}v1.3.3${C.reset}`);
+  console.log(`${C.bold}${C.blue}  PBC // DEMO BRIDGE${C.reset} ${C.dim}v0.1.0${C.reset}`);
   console.log(`${C.dim}  ============================${C.reset}`);
   console.log(`${C.dim}  Bind:${C.reset}     ${C.cyan}http://${BIND_HOST}:${PORT}${C.reset}`);
   console.log(`${C.dim}  Posture:${C.reset}  ${REQUIRE_CONFIRM ? C.yellow + 'GLOVES ON (require-confirm)' : C.red + 'GHOST PEPPER (full access)'}${C.reset}`);
@@ -109,6 +136,7 @@ function banner() {
   console.log(`${C.dim}  Platform:${C.reset} ${process.platform}`);
   console.log(`${C.dim}  CWD:${C.reset}      ${process.cwd()}`);
   console.log(`${C.dim}  Home:${C.reset}     ${os.homedir()}`);
+  console.log(`${C.dim}  PBC data:${C.reset} ${PBC_DATA_DIR}`);
   console.log('');
   console.log(`${C.dim}  Kill: Ctrl+C${C.reset}`);
   console.log('');
@@ -207,7 +235,8 @@ async function handleHealth(req, res) {
   const corrId = genCorrelationId();
   sendJson(res, 200, {
     status: 'online',
-    version: '1.3.3',
+    version: '0.1.0',
+    pbcDataDir: PBC_DATA_DIR,
     posture: REQUIRE_CONFIRM ? 'gloves-on' : 'ghost-pepper',
     shell: ACTIVE_SHELL,
     cwd: process.cwd(),
@@ -356,31 +385,6 @@ async function handleShellExec(req, res) {
       return;
     }
 
-    // --- NATIVE COMMAND INTERCEPTION (ECR-WG / C-DAWG) ---
-    const trimmedCmd = command.trim();
-    if (trimmedCmd === '?_') {
-      const rituals = fs.readFileSync(expandPath('rituals/man_rituals.py'), 'utf-8');
-      sendJson(res, 200, {
-        command: '?_',
-        stdout: `---[ CONTINUUM RITUALS // HELP ]---\n\n${rituals}\n`,
-        exitCode: 0,
-        correlationId: corrId
-      });
-      logReq(corrId, 'POST', '/shell/exec', 'INTERCEPT: ?_ (HELP)', 'ok');
-      return;
-    }
-    if (trimmedCmd === '/_') {
-      const glossary = fs.readFileSync(expandPath('GLOSSARY.md'), 'utf-8');
-      sendJson(res, 200, {
-        command: '/_',
-        stdout: `---[ CONTINUUM GLOSSARY // REHYDRATION ]---\n\n${glossary}\n`,
-        exitCode: 0,
-        correlationId: corrId
-      });
-      logReq(corrId, 'POST', '/shell/exec', 'INTERCEPT: /_ (GLOSSARY)', 'ok');
-      return;
-    }
-
     // v1.1 fix: expand ~ in the command itself (cmd.exe doesn't do it)
     const expandedCommand = expandTildeInCommand(command);
     const destructive = isDestructive(expandedCommand);
@@ -418,128 +422,151 @@ async function handleShellExec(req, res) {
   }
 }
 
-// ---------- Identity Manager (v2) ----------
-// Replaces the v1.3.2 identity section. Design: docs/identity-manager-v2-spec.md
+// ---------- Identity Manager (v3/v4 work signatures) ----------
+// Identity is backed by Ed25519 keypairs. work_hash = SHA256(raw file bytes), lowercase hex.
 //
-// Principles enforced here:
-//  - Identity is a FILE the agent authored, not bridge process metadata.
-//  - Hashing is deterministic: SHA256 of raw file bytes, no timestamps, no pid.
-//  - The bridge computes hashes on request. It never decides identity.
-//  - A signature binds two real hashes (work file + signer identity file).
-//  - Nothing hashes itself: the signature file is separate from the work.
+// v4 (current): signs a portable, self-describing message — schema, work_hash, signer,
+// public_key — no machine-local paths in the signed bytes. signed_message is persisted
+// in the artifact so strangers can verify offline without ghost-pepper source.
+// v3 (legacy): absolute work_file path was in the signed message; still validated.
 
-// Deterministic SHA256 of a file's raw bytes.
+const WORK_SIGNATURE_SCHEMA_V3 = 'continuum-work-signature-v3';
+const WORK_SIGNATURE_SCHEMA_V4 = 'continuum-work-signature-v4';
+const SIGNED_MESSAGE_ENCODING = 'utf-8';
+
 function hashFileBytes(resolvedPath) {
   const buf = fs.readFileSync(resolvedPath);
   return crypto.createHash('sha256').update(buf).digest('hex');
 }
 
-const HMAC_SECRET_RELATIVE_PATH = 'continuum-local/identity/hmac_secret.key';
-
-function readHmacSecret(createIfMissing) {
-  const secretPath = expandPath(HMAC_SECRET_RELATIVE_PATH);
-  if (fs.existsSync(secretPath)) {
-    const secret = fs.readFileSync(secretPath, 'utf-8').trim();
-    if (secret) return secret;
-  }
-  if (!createIfMissing) return null;
-
-  fs.mkdirSync(path.dirname(secretPath), { recursive: true });
-  const secret = crypto.randomBytes(32).toString('hex');
-  fs.writeFileSync(secretPath, secret + '\n', { encoding: 'utf-8', mode: 0o600 });
-  return secret;
-}
-
-function buildWorkSignaturePayload(workFile, workHash, signerName, signerIdentityHash) {
+function buildWorkSignaturePayloadV3(workFile, workHash, signerName, publicKeyBase64) {
   return [
-    'continuum-work-signature-v2',
+    WORK_SIGNATURE_SCHEMA_V3,
     workFile,
     workHash,
     signerName,
-    signerIdentityHash
+    publicKeyBase64
   ].join('\n');
 }
 
-function hmacSha256Hex(payload, createIfMissing) {
-  const secret = readHmacSecret(createIfMissing);
-  if (!secret) return null;
-  return crypto.createHmac('sha256', secret).update(payload).digest('hex');
+function buildWorkSignaturePayloadV4(workHash, signerName, publicKeyBase64) {
+  return [
+    WORK_SIGNATURE_SCHEMA_V4,
+    workHash,
+    signerName,
+    publicKeyBase64
+  ].join('\n');
 }
 
-function safeEqualHex(a, b) {
-  if (!a || !b) return false;
-  const left = Buffer.from(String(a), 'hex');
-  const right = Buffer.from(String(b), 'hex');
-  if (left.length !== right.length) return false;
-  return crypto.timingSafeEqual(left, right);
+function resolveSignaturePayload(signature) {
+  if (!signature || typeof signature !== 'object') return null;
+  const workHash = signature.work_hash;
+  const signer = signature.signer || 'UNKNOWN_SIGNER';
+  const publicKey = signature.public_key;
+  if (!workHash || !publicKey) return null;
+
+  if (signature.schema === WORK_SIGNATURE_SCHEMA_V4) {
+    const expected = buildWorkSignaturePayloadV4(workHash, signer, publicKey);
+    const payload = typeof signature.signed_message === 'string'
+      ? signature.signed_message
+      : expected;
+    return { payload, expected, encoding: signature.signed_message_encoding || SIGNED_MESSAGE_ENCODING };
+  }
+  if (signature.schema === WORK_SIGNATURE_SCHEMA_V3) {
+    const workFile = signature.work_file;
+    if (!workFile) return null;
+    const expected = buildWorkSignaturePayloadV3(workFile, workHash, signer, publicKey);
+    return { payload: expected, expected, encoding: SIGNED_MESSAGE_ENCODING };
+  }
+  return null;
 }
 
-// POST /identity/hash-file
-// Input:  { path }
-// Output: { path, hash, size }
-// The deterministic fingerprint primitive. Same file in, same hash out, always.
-async function handleIdentityHashFile(req, res) {
+function verifyWorkSignature(signature) {
+  const resolved = resolveSignaturePayload(signature);
+  if (!resolved || !signature.signature_base64 || !signature.public_key) {
+    return { sigMatches: false, messageMatches: false };
+  }
+  const messageMatches = resolved.payload === resolved.expected;
+  try {
+    const publicKeyObj = crypto.createPublicKey({
+      key: Buffer.from(signature.public_key, 'base64'),
+      format: 'der',
+      type: 'spki'
+    });
+    const sigMatches = crypto.verify(
+      null,
+      Buffer.from(resolved.payload, resolved.encoding),
+      publicKeyObj,
+      Buffer.from(signature.signature_base64, 'base64')
+    );
+    return { sigMatches, messageMatches };
+  } catch {
+    return { sigMatches: false, messageMatches };
+  }
+}
+
+// POST /identity/get-public-key
+// Input:  { keyPath }
+// Output: { path, publicKeyBase64 }
+// Reads an Ed25519 private key file and exports the corresponding public key.
+async function handleIdentityGetPublicKey(req, res) {
   const corrId = genCorrelationId();
   try {
     const body = await readBody(req);
-    const filePath = body.path;
-    if (!filePath) {
-      sendJson(res, 400, { error: 'path required', correlationId: corrId });
-      logReq(corrId, 'POST', '/identity/hash-file', 'no path', 'error');
+    const keyPath = body.keyPath;
+    if (!keyPath) {
+      sendJson(res, 400, { error: 'keyPath required', correlationId: corrId });
+      logReq(corrId, 'POST', '/identity/get-public-key', 'no keyPath', 'error');
       return;
     }
-    const resolved = expandPath(filePath);
+    const resolved = expandPath(keyPath);
     if (!fs.existsSync(resolved)) {
-      sendJson(res, 404, { error: 'file not found: ' + resolved, correlationId: corrId });
-      logReq(corrId, 'POST', '/identity/hash-file', 'not found', 'error');
+      sendJson(res, 404, { error: 'key not found: ' + resolved, correlationId: corrId });
+      logReq(corrId, 'POST', '/identity/get-public-key', 'not found', 'error');
       return;
     }
-    const stats = fs.statSync(resolved);
-    if (stats.isDirectory()) {
-      sendJson(res, 400, { error: 'path is a directory, not a file', correlationId: corrId });
-      logReq(corrId, 'POST', '/identity/hash-file', 'is dir', 'error');
-      return;
-    }
-    const hash = hashFileBytes(resolved);
+    const privateKey = crypto.createPrivateKey(fs.readFileSync(resolved));
+    const publicKey = crypto.createPublicKey(privateKey);
+    const pubBase64 = publicKey.export({ type: 'spki', format: 'der' }).toString('base64');
+    
     sendJson(res, 200, {
       path: resolved,
-      hash,
-      size: stats.size,
+      publicKeyBase64: pubBase64,
       correlationId: corrId
     });
-    logReq(corrId, 'POST', '/identity/hash-file', `${resolved} -> ${hash.substring(0, 16)}...`, 'ok');
+    logReq(corrId, 'POST', '/identity/get-public-key', `Derived public key for ${resolved}`, 'ok');
   } catch (e) {
     sendJson(res, 500, { error: e.message, correlationId: corrId });
-    logReq(corrId, 'POST', '/identity/hash-file', e.message, 'error');
+    logReq(corrId, 'POST', '/identity/get-public-key', e.message, 'error');
   }
 }
 
 // POST /identity/sign-work
-// Input:  { workPath, signerName, signerIdentityHash, signaturePath? }
+// Input:  { workPath, signerName, keyPath, signaturePath? }
 // Output: { signaturePath, signature: {...} }
 // Hashes the REAL work file and writes a separate signature file binding that
-// work hash to the signer's identity hash. The signature file never contains
-// its own hash. The timestamp records when signing happened; it never feeds
-// the work hash, so the work hash stays deterministic.
+// work hash to the signer's public key using an Ed25519 signature.
 async function handleIdentitySignWork(req, res) {
   const corrId = genCorrelationId();
   try {
     const body = await readBody(req);
     const workPath = body.workPath;
     const signerName = body.signerName || 'UNKNOWN_SIGNER';
-    const signerIdentityHash = body.signerIdentityHash;
+    const keyPath = body.keyPath;
 
     if (!workPath) {
       sendJson(res, 400, { error: 'workPath required', correlationId: corrId });
       logReq(corrId, 'POST', '/identity/sign-work', 'no workPath', 'error');
       return;
     }
-    if (!signerIdentityHash) {
-      sendJson(res, 400, { error: 'signerIdentityHash required (enroll the agent first)', correlationId: corrId });
-      logReq(corrId, 'POST', '/identity/sign-work', 'no signerIdentityHash', 'error');
+    if (!keyPath) {
+      sendJson(res, 400, { error: 'keyPath required (enroll the agent first)', correlationId: corrId });
+      logReq(corrId, 'POST', '/identity/sign-work', 'no keyPath', 'error');
       return;
     }
     const resolvedWork = expandPath(workPath);
+    const resolvedKey = expandPath(keyPath);
+    
     if (!fs.existsSync(resolvedWork)) {
       sendJson(res, 404, { error: 'work file not found: ' + resolvedWork, correlationId: corrId });
       logReq(corrId, 'POST', '/identity/sign-work', 'work not found', 'error');
@@ -550,18 +577,31 @@ async function handleIdentitySignWork(req, res) {
       logReq(corrId, 'POST', '/identity/sign-work', 'work is dir', 'error');
       return;
     }
+    if (!fs.existsSync(resolvedKey)) {
+      sendJson(res, 404, { error: 'private key not found: ' + resolvedKey, correlationId: corrId });
+      logReq(corrId, 'POST', '/identity/sign-work', 'key not found', 'error');
+      return;
+    }
 
     const workHash = hashFileBytes(resolvedWork);
-    const signaturePayload = buildWorkSignaturePayload(resolvedWork, workHash, signerName, signerIdentityHash);
+    const privateKey = crypto.createPrivateKey(fs.readFileSync(resolvedKey));
+    const publicKey = crypto.createPublicKey(privateKey);
+    const pubBase64 = publicKey.export({ type: 'spki', format: 'der' }).toString('base64');
+    
+    const signedMessage = buildWorkSignaturePayloadV4(workHash, signerName, pubBase64);
+    const signatureBytes = crypto.sign(null, Buffer.from(signedMessage, SIGNED_MESSAGE_ENCODING), privateKey);
+
     const signature = {
-      schema: 'continuum-work-signature-v2',
+      schema: WORK_SIGNATURE_SCHEMA_V4,
       work_file: resolvedWork,
       work_hash: workHash,
       signer: signerName,
-      signer_identity_hash: signerIdentityHash,
-      signature_alg: 'HMAC-SHA256',
-      signature_hmac: hmacSha256Hex(signaturePayload, true),
-      signed_at: new Date().toISOString()
+      public_key: pubBase64,
+      signature_alg: 'Ed25519',
+      signature_base64: signatureBytes.toString('base64'),
+      signed_at: new Date().toISOString(),
+      signed_message: signedMessage,
+      signed_message_encoding: SIGNED_MESSAGE_ENCODING
     };
 
     // Default signature path sits next to the work file: <work>.sig.json
@@ -588,11 +628,8 @@ async function handleIdentitySignWork(req, res) {
 
 // POST /identity/validate-work
 // Input:  { signaturePath }
-// Output: { valid, workMatches, recorded_hash, current_hash, signer, ... }
-// Re-hashes the work file the signature points at and reports whether it still
-// matches. The bridge does NOT check the identity hash against Keeper; Keeper is
-// off-machine and operator-held. The bridge reports the claimed signer identity
-// hash so the operator can check it against Keeper themselves.
+// Output: { valid, workMatches, sigMatches, work_file, ... }
+// Re-hashes the work file the signature points at and verifies the Ed25519 signature.
 async function handleIdentityValidateWork(req, res) {
   const corrId = genCorrelationId();
   try {
@@ -634,7 +671,7 @@ async function handleIdentityValidateWork(req, res) {
         workMatches: false,
         reason: 'work file referenced by signature no longer exists: ' + resolvedWork,
         signer: signature.signer || null,
-        signer_identity_hash: signature.signer_identity_hash || null,
+        public_key: signature.public_key || null,
         correlationId: corrId
       });
       logReq(corrId, 'POST', '/identity/validate-work', 'work file gone', 'ok');
@@ -643,32 +680,33 @@ async function handleIdentityValidateWork(req, res) {
 
     const currentHash = hashFileBytes(resolvedWork);
     const workMatches = currentHash === recordedHash;
-    let hmacMatches = null;
-    if (signature.signature_hmac) {
-      const signaturePayload = buildWorkSignaturePayload(
-        workFile,
-        recordedHash,
-        signature.signer || 'UNKNOWN_SIGNER',
-        signature.signer_identity_hash || ''
-      );
-      hmacMatches = safeEqualHex(signature.signature_hmac, hmacSha256Hex(signaturePayload, false));
-    }
-    const valid = workMatches && hmacMatches !== false;
+    
+    const { sigMatches, messageMatches } = verifyWorkSignature(signature);
+    const valid = workMatches && sigMatches && (
+      signature.schema !== WORK_SIGNATURE_SCHEMA_V4 || messageMatches
+    );
 
     sendJson(res, 200, {
       valid,
       workMatches,
-      hmacMatches,
+      sigMatches,
+      messageMatches,
+      schema: signature.schema || null,
       work_file: resolvedWork,
       recorded_hash: recordedHash,
       current_hash: currentHash,
       signer: signature.signer || null,
-      signer_identity_hash: signature.signer_identity_hash || null,
+      public_key: signature.public_key || null,
       signature_alg: signature.signature_alg || null,
       signed_at: signature.signed_at || null,
+      signed_message: signature.signed_message || null,
       note: valid
-        ? 'Work file is unchanged since signing and local HMAC verification did not fail. Check signer_identity_hash against Keeper to confirm authorship.'
-        : 'WORK FILE OR SIGNATURE HAS CHANGED since it was signed. The signature no longer covers the current file.',
+        ? 'Work file is unchanged since signing and Ed25519 signature is cryptographically valid. Check public_key against Keeper to confirm authorship.'
+        : !workMatches
+          ? 'WORK FILE HAS CHANGED since it was signed. The signature is invalid.'
+          : signature.schema === WORK_SIGNATURE_SCHEMA_V4 && !messageMatches
+            ? 'signed_message does not match the v4 convention reconstructed from work_hash, signer, and public_key.'
+            : 'SIGNATURE DOES NOT VERIFY against the declared signed message.',
       correlationId: corrId
     });
     logReq(corrId, 'POST', '/identity/validate-work', `${resolvedWork} ${valid ? 'MATCH' : 'CHANGED'}`, 'ok');
@@ -678,15 +716,133 @@ async function handleIdentityValidateWork(req, res) {
   }
 }
 
+// ---------- PBC data plane ----------
+async function handlePbcPaths(req, res) {
+  const corrId = genCorrelationId();
+  ensurePbcDirs();
+  sendJson(res, 200, { paths: pbcPaths(), correlationId: corrId });
+}
+
+function readTruthroot() {
+  const p = ensurePbcDirs();
+  return JSON.parse(fs.readFileSync(p.truthroot, 'utf-8'));
+}
+
+function writeTruthroot(doc) {
+  const p = ensurePbcDirs();
+  fs.writeFileSync(p.truthroot, JSON.stringify(doc, null, 2) + '\n', 'utf-8');
+}
+
+function generateEd25519Keypair(agentId) {
+  const p = ensurePbcDirs();
+  const keyDir = path.join(p.keys, agentId);
+  fs.mkdirSync(keyDir, { recursive: true });
+  const { publicKey, privateKey } = crypto.generateKeyPairSync('ed25519');
+  const privPem = privateKey.export({ type: 'pkcs8', format: 'pem' });
+  const pubDer = publicKey.export({ type: 'spki', format: 'der' });
+  const keyPath = path.join(keyDir, 'private-key.pem');
+  fs.writeFileSync(keyPath, privPem, { encoding: 'utf-8', mode: 0o600 });
+  return { keyPath, publicKeyBase64: pubDer.toString('base64') };
+}
+
+async function handlePbcEnroll(req, res) {
+  const corrId = genCorrelationId();
+  try {
+    const body = await readBody(req);
+    const agentId = (body.agent_id || '').trim();
+    const displayName = (body.display_name || agentId || 'Unnamed synth').trim();
+    const synthType = body.synth_type === 'worker' ? 'worker' : 'companion';
+    if (!agentId || !/^[a-z0-9][a-z0-9-]{0,31}$/.test(agentId)) {
+      sendJson(res, 400, { error: 'agent_id required (lowercase a-z0-9, max 32)', correlationId: corrId });
+      return;
+    }
+    const doc = readTruthroot();
+    if ((doc.agents || []).some((a) => a.agent_id === agentId)) {
+      sendJson(res, 409, { error: 'agent_id already enrolled', correlationId: corrId });
+      return;
+    }
+    let keyPath = body.key_path ? expandPath(body.key_path) : null;
+    let publicKeyBase64 = body.public_key || null;
+    if (!keyPath) {
+      const generated = generateEd25519Keypair(agentId);
+      keyPath = generated.keyPath;
+      publicKeyBase64 = generated.publicKeyBase64;
+    } else if (!publicKeyBase64) {
+      const privateKey = crypto.createPrivateKey(fs.readFileSync(keyPath));
+      const publicKey = crypto.createPublicKey(privateKey);
+      publicKeyBase64 = publicKey.export({ type: 'spki', format: 'der' }).toString('base64');
+    }
+    const entry = {
+      agent_id: agentId,
+      display_name: displayName,
+      synth_type: synthType,
+      public_key: publicKeyBase64,
+      key_path: keyPath,
+      enrolled_at: new Date().toISOString()
+    };
+    doc.agents = doc.agents || [];
+    doc.agents.push(entry);
+    writeTruthroot(doc);
+    sendJson(res, 200, { enrolled: entry, correlationId: corrId });
+    logReq(corrId, 'POST', '/pbc/enroll', `${synthType} ${agentId}`, 'ok');
+  } catch (e) {
+    sendJson(res, 500, { error: e.message, correlationId: corrId });
+    logReq(corrId, 'POST', '/pbc/enroll', e.message, 'error');
+  }
+}
+
+async function handlePbcInitDemo(req, res) {
+  const corrId = genCorrelationId();
+  try {
+    const p = ensurePbcDirs();
+    const doc = readTruthroot();
+    if ((doc.agents || []).length > 0) {
+      sendJson(res, 200, { initialized: false, reason: 'truthroot already has agents', paths: p, correlationId: corrId });
+      return;
+    }
+    const generated = generateEd25519Keypair('demo-worker');
+    const worker = {
+      agent_id: 'demo-worker',
+      display_name: 'Demo Worker',
+      synth_type: 'worker',
+      public_key: generated.publicKeyBase64,
+      key_path: generated.keyPath,
+      enrolled_at: new Date().toISOString()
+    };
+    doc.agents = [worker];
+    writeTruthroot(doc);
+    const job = {
+      job_id: 'demo-hello',
+      assigned_to: worker.public_key,
+      instruction: 'Write a one-line hello work product, sign it, and retire this job to done/.',
+      work_body: 'HELLO FROM {{AGENT}} AT {{UTC}}\n',
+      work_path: 'inbox/done/hello-demo-worker.txt',
+      grace: {
+        goal: 'grid.curtailment.demo',
+        note: 'Simulated curtailment fixture — no real MW'
+      }
+    };
+    fs.writeFileSync(path.join(p.inboxOpen, 'demo-hello.json'), JSON.stringify(job, null, 2) + '\n', 'utf-8');
+    sendJson(res, 200, { initialized: true, worker, job_id: job.job_id, paths: p, correlationId: corrId });
+    logReq(corrId, 'POST', '/pbc/init-demo', 'demo-worker + demo-hello', 'ok');
+  } catch (e) {
+    sendJson(res, 500, { error: e.message, correlationId: corrId });
+    logReq(corrId, 'POST', '/pbc/init-demo', e.message, 'error');
+  }
+}
+
 // ---------- Router ----------
 const ROUTES = {
   'GET /health': handleHealth,
+  'GET /pbc/paths': handlePbcPaths,
+  'POST /pbc/enroll': handlePbcEnroll,
+  'POST /pbc/init-demo': handlePbcInitDemo,
   'POST /fs/read': handleFsRead,
   'POST /fs/write': handleFsWrite,
   'POST /fs/list': handleFsList,
   'POST /fs/delete': handleFsDelete,
   'POST /shell/exec': handleShellExec,
-  'POST /identity/hash-file': handleIdentityHashFile,
+  'POST /identity/get-public-key': handleIdentityGetPublicKey,
   'POST /identity/sign-work': handleIdentitySignWork,
   'POST /identity/validate-work': handleIdentityValidateWork
 };
@@ -714,6 +870,7 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, BIND_HOST, () => {
+  ensurePbcDirs();
   banner();
   console.log(`${C.green}  ready.${C.reset}`);
   console.log('');

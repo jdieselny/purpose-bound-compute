@@ -1,17 +1,17 @@
-# PBC Staging Reference Integration
+# PBC public demos
 
-This directory contains the reference integration of `@emilia-protocol/attest` inside the J Diesel NY God Terminal and local Express bridge.
+Two terminals, one truthroot, portable receipts.
 
-## Contents
-*   `god_terminal.html` - The frontend client.
-*   `bridge.js` - The backend localhost Express bridge.
+| Path | Name |
+|------|------|
+| [synth-desk/](synth-desk/) | **Synth Desk** — companions (HTTP of AI) |
+| [pbc-shift/](pbc-shift/) | **PBC Shift** — workers (HTTPS of AI) |
+| [shared/bridge/](shared/bridge/) | Local demo bridge (start this first) |
+| [VERIFY.md](VERIFY.md) | Machine B offline verification |
+| [COSA_MAP.md](COSA_MAP.md) | Coverage + backlog discipline |
 
-## Setup
-Run the bridge:
 ```bash
-node bridge.js
+node demo/shared/bridge/bridge.js
 ```
-Open `god_terminal.html` in a web browser to run the client.
 
----
 *AFT: AI-generated-user-reviewed-pending*
