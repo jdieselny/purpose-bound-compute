@@ -128,7 +128,19 @@
   .log-line { margin-bottom: 4px; }
   .log-line.ok { color: var(--accent-success); }
   .log-line.err { color: var(--accent-error); }
+  .form-row { margin-bottom: 10px; }
+  .form-row label {
+    display: block; font-size: 10px; letter-spacing: 0.06em;
+    color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase;
+  }
+  .form-row select, .form-row input, .form-row textarea {
+    width: 100%; background: var(--bg-elevated); border: 1px solid var(--border);
+    color: var(--text-primary); font-size: 12px; padding: 8px 10px;
+    font-family: inherit;
+  }
+  .form-row textarea { min-height: 64px; resize: vertical; }
 </style>
+<script src="../shared/weather-strip.js"></script>
 </head>
 <body>
 <div class="app">
@@ -141,21 +153,45 @@
     </div>
   </header>
 
+  <div id="wx-mount"></div>
+
   <div class="callout" id="map-callout">
     <strong>PBC Shift — Workers (HTTPS of AI)</strong>
     Workers clock in, take only jobs assigned to their thumbprint, do work, sign,
     clock out, and leave receipts (replaceable duty units).
     Not enrolled → not listed. Not assigned to you → not in inbox.
-    Create/register synths first in <a href="../synth-desk/index.html">Synth Desk</a>.
-    Map: truthroot · shift discipline · WHO receipts · offline verify.
+    Create jobs below for any enrolled worker. Synths enroll in
+    <a href="../synth-desk/index.html">Synth Desk</a>.
+    Map: truthroot · shift discipline · WHO receipts · offline verify · L5 weather broadcast.
     <a href="../COSA_MAP.md">COSA_MAP.md</a> · <a href="../../DEFINITIONS.md">DEFINITIONS.md</a>
   </div>
 
   <div id="screen-a" class="screen active">
     <div id="agent-list"></div>
-    <div class="actions" style="margin-top:12px">
-      <button class="action" id="btn-init-demo">Init demo worker + job</button>
-      <button class="action" id="btn-refresh">Refresh</button>
+    <div class="panel" style="margin-top:12px">
+      <div class="panel-head">CREATE JOB (thumbprint-routed)</div>
+      <div class="panel-body">
+        <div class="form-row">
+          <label for="job-assign">Assign to worker</label>
+          <select id="job-assign"><option value="">— enroll a worker first —</option></select>
+        </div>
+        <div class="form-row">
+          <label for="job-instruction">Instruction</label>
+          <textarea id="job-instruction" placeholder="Write a one-line status, sign it, and complete this job."></textarea>
+        </div>
+        <div class="form-row">
+          <label for="job-id">Job id (optional slug)</label>
+          <input id="job-id" type="text" placeholder="auto from instruction if blank" />
+        </div>
+        <div class="actions">
+          <button class="action primary" id="btn-create-job">Create job</button>
+          <button class="action" id="btn-init-demo">Init demo worker + job</button>
+          <button class="action" id="btn-refresh">Refresh</button>
+        </div>
+        <p class="empty" style="margin-top:10px" id="create-job-hint">
+          CLI: <code>node demo/scripts/create-job.mjs --assign demo-worker -i "…"</code>
+        </p>
+      </div>
     </div>
   </div>
 
@@ -300,6 +336,20 @@ async function checkBridge() {
   }
 }
 
+function fillJobAssigneeSelect(allAgents) {
+  const sel = document.getElementById('job-assign');
+  if (!sel) return;
+  const workers = (allAgents || []).filter(a => a.synth_type !== 'companion');
+  const pool = workers.length ? workers : (allAgents || []);
+  if (!pool.length) {
+    sel.innerHTML = '<option value="">— enroll a worker first —</option>';
+    return;
+  }
+  sel.innerHTML = pool.map(a =>
+    `<option value="${a.agent_id}">${a.display_name || a.agent_id} (${a.agent_id} · ${a.synth_type || 'worker'})</option>`
+  ).join('');
+}
+
 async function loadAgents() {
   const list = document.getElementById('agent-list');
   if (!bridgeOnline) {
@@ -307,12 +357,27 @@ async function loadAgents() {
     return;
   }
   try {
-    const data = await bridgePost('/fs/read', { path: pbcPaths.truthroot });
-    const root = JSON.parse(data.content);
-    agents = (root.agents || []).filter(a => a.synth_type !== 'companion');
-    if (agents.length === 0) {
-      agents = (root.agents || []);
+    let rootAgents = [];
+    try {
+      const data = await bridgeGet('/pbc/agents');
+      rootAgents = data.agents || [];
+    } catch (_) {
+      const data = await bridgePost('/fs/read', { path: pbcPaths.truthroot });
+      const root = JSON.parse(data.content);
+      rootAgents = root.agents || [];
     }
+    // Prefer workers for the shift board; fall back to all enrolled
+    agents = rootAgents.filter(a => a.synth_type !== 'companion');
+    if (agents.length === 0) agents = rootAgents.slice();
+    // For openShift we need key_path — re-read truthroot for full records
+    try {
+      const full = await bridgePost('/fs/read', { path: pbcPaths.truthroot });
+      const fullRoot = JSON.parse(full.content);
+      const byId = Object.fromEntries((fullRoot.agents || []).map(a => [a.agent_id, a]));
+      agents = agents.map(a => ({ ...a, ...(byId[a.agent_id] || {}) }));
+    } catch (_) { /* keep list-only fields */ }
+
+    fillJobAssigneeSelect(rootAgents);
     document.getElementById('agent-count').textContent = 'workers: ' + agents.length + ' enrolled';
     if (agents.length === 0) {
       list.innerHTML = '<p class="empty">No workers in truthroot. Enroll a worker in Synth Desk or click Init demo.</p>';
@@ -332,6 +397,30 @@ async function loadAgents() {
     });
   } catch (e) {
     list.innerHTML = '<p class="empty">Failed to load truthroot: ' + e.message + '</p>';
+  }
+}
+
+async function createJob() {
+  const assign = document.getElementById('job-assign').value;
+  const instruction = document.getElementById('job-instruction').value.trim();
+  const jobId = document.getElementById('job-id').value.trim();
+  if (!assign) {
+    alert('Select an enrolled worker (or Init demo first).');
+    return;
+  }
+  try {
+    const body = { assign_to: assign };
+    if (instruction) body.instruction = instruction;
+    if (jobId) body.job_id = jobId;
+    const r = await bridgePost('/pbc/jobs', body);
+    log('Created job ' + r.job.job_id + ' → ' + r.assignee.agent_id, 'ok');
+    document.getElementById('job-instruction').value = '';
+    document.getElementById('job-id').value = '';
+    document.getElementById('create-job-hint').textContent =
+      'Created ' + r.job.job_id + ' for ' + r.assignee.agent_id + '. Open that worker to see inbox.';
+    if (selectedAgent && selectedAgent.agent_id === r.assignee.agent_id) await loadInbox();
+  } catch (e) {
+    alert('Create job failed: ' + e.message);
   }
 }
 
@@ -527,6 +616,7 @@ document.getElementById('btn-sign-work').addEventListener('click', signWork);
 document.getElementById('btn-complete').addEventListener('click', completeJob);
 document.getElementById('btn-clock-out').addEventListener('click', clockOut);
 document.getElementById('btn-refresh').addEventListener('click', async () => { await checkBridge(); await loadAgents(); });
+document.getElementById('btn-create-job').addEventListener('click', createJob);
 document.getElementById('btn-init-demo').addEventListener('click', async () => {
   try {
     const r = await bridgePost('/pbc/init-demo');
@@ -538,6 +628,9 @@ document.getElementById('btn-init-demo').addEventListener('click', async () => {
 });
 
 (async function init() {
+  if (window.PbcWeatherStrip) {
+    window.PbcWeatherStrip.mount('#wx-mount');
+  }
   await checkBridge();
   await loadAgents();
   setInterval(checkBridge, 10000);

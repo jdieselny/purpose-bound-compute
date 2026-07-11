@@ -1114,14 +1114,23 @@ PREVIOUS_PROVENANCE: Dima // 2026-05-21T18:11:52.349Z
   </div>
 </header>
 
+<div id="wx-mount" style="padding: 0 16px; max-width: 1400px; margin: 0 auto;"></div>
+
 <div class="map-callout">
   <strong>Synth Desk — Companions (HTTP of AI)</strong>
   Create and register synths from a <strong>context stack (L1–L4)</strong>.
   A companion is a portable body: same identity, hop platforms.
-  Map: synth edge · context stack · enrollment · simulated intent router.
-  Workers and signed shifts live in <a href="../pbc-shift/index.html">PBC Shift</a> — not here.
+  Map: synth edge · context stack · enrollment · simulated intent router · L5 weather broadcast.
+  Workers, job create, and signed shifts live in <a href="../pbc-shift/index.html">PBC Shift</a>.
   <a href="../COSA_MAP.md">COSA_MAP.md</a> · <a href="../../DEFINITIONS.md">DEFINITIONS.md</a> · <a href="../../docs/diagrams/aft-truth-overlay.html">AFT overlay</a>
 </div>
+<script src="../shared/weather-strip.js"></script>
+<script>
+  // #wx-mount is already in the DOM above this script
+  if (window.PbcWeatherStrip) {
+    window.PbcWeatherStrip.mount('#wx-mount');
+  }
+</script>
 
 <div class="routing-bar">
   <span class="routing-label">ROUTE</span>

@@ -81,13 +81,15 @@ function pbcPaths() {
     inboxDone: path.join(root, 'inbox', 'done'),
     timecards: path.join(root, 'timecards'),
     receipts: path.join(root, 'receipts'),
-    keys: path.join(root, 'keys')
+    keys: path.join(root, 'keys'),
+    cache: path.join(root, 'cache'),
+    weatherCache: path.join(root, 'cache', 'weather.json')
   };
 }
 
 function ensurePbcDirs() {
   const p = pbcPaths();
-  for (const dir of [p.root, path.dirname(p.truthroot), p.inboxOpen, p.inboxDone, p.timecards, p.receipts, p.keys]) {
+  for (const dir of [p.root, path.dirname(p.truthroot), p.inboxOpen, p.inboxDone, p.timecards, p.receipts, p.keys, p.cache]) {
     fs.mkdirSync(dir, { recursive: true });
   }
   if (!fs.existsSync(p.truthroot)) {
@@ -205,7 +207,7 @@ function isDestructive(command) {
 // ---------- HTTP helpers ----------
 function sendJson(res, status, payload) {
   res.writeHead(status, {
-    'Content-Type': 'application/json',
+    'Content-Type': 'application/json; charset=utf-8',
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, X-Correlation-Id'
@@ -831,10 +833,315 @@ async function handlePbcInitDemo(req, res) {
   }
 }
 
+// ---------- Agents / Jobs / Weather (public demo plane) ----------
+
+function slugifyJobId(s) {
+  return String(s || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 48) || ('job-' + crypto.randomBytes(4).toString('hex'));
+}
+
+function findAgent(doc, assignTo) {
+  const agents = doc.agents || [];
+  const key = String(assignTo || '').trim();
+  if (!key) return null;
+  return (
+    agents.find((a) => a.agent_id === key) ||
+    agents.find((a) => a.public_key === key) ||
+    null
+  );
+}
+
+async function handlePbcAgents(req, res) {
+  const corrId = genCorrelationId();
+  try {
+    ensurePbcDirs();
+    const doc = readTruthroot();
+    const agents = (doc.agents || []).map((a) => ({
+      agent_id: a.agent_id,
+      display_name: a.display_name,
+      synth_type: a.synth_type || 'companion',
+      public_key: a.public_key,
+      enrolled_at: a.enrolled_at || null
+      // key_path intentionally omitted from public list surface
+    }));
+    sendJson(res, 200, { agents, count: agents.length, correlationId: corrId });
+    logReq(corrId, 'GET', '/pbc/agents', String(agents.length), 'ok');
+  } catch (e) {
+    sendJson(res, 500, { error: e.message, correlationId: corrId });
+    logReq(corrId, 'GET', '/pbc/agents', e.message, 'error');
+  }
+}
+
+async function handlePbcJobsList(req, res) {
+  const corrId = genCorrelationId();
+  try {
+    const p = ensurePbcDirs();
+    const url = new URL(req.url, 'http://127.0.0.1');
+    const status = (url.searchParams.get('status') || 'open').toLowerCase();
+    const dir = status === 'done' ? p.inboxDone : p.inboxOpen;
+    const files = fs.readdirSync(dir).filter((f) => f.endsWith('.json'));
+    const jobs = [];
+    for (const f of files) {
+      try {
+        const raw = fs.readFileSync(path.join(dir, f), 'utf-8');
+        jobs.push(JSON.parse(raw));
+      } catch (_) { /* skip */ }
+    }
+    sendJson(res, 200, { status, jobs, count: jobs.length, correlationId: corrId });
+    logReq(corrId, 'GET', '/pbc/jobs', `${status}:${jobs.length}`, 'ok');
+  } catch (e) {
+    sendJson(res, 500, { error: e.message, correlationId: corrId });
+    logReq(corrId, 'GET', '/pbc/jobs', e.message, 'error');
+  }
+}
+
+async function handlePbcJobsCreate(req, res) {
+  const corrId = genCorrelationId();
+  try {
+    const p = ensurePbcDirs();
+    const body = await readBody(req);
+    const doc = readTruthroot();
+    const agent = findAgent(doc, body.assign_to || body.assigned_to || body.agent_id);
+    if (!agent) {
+      sendJson(res, 404, {
+        error: 'assignee not found in truthroot (use agent_id or public_key of an enrolled synth)',
+        correlationId: corrId
+      });
+      return;
+    }
+    if (agent.synth_type === 'companion' && body.allow_companion !== true) {
+      sendJson(res, 400, {
+        error: 'assignee is a companion; pass allow_companion:true or assign a worker',
+        agent_id: agent.agent_id,
+        correlationId: corrId
+      });
+      return;
+    }
+    let jobId = (body.job_id || '').trim();
+    if (!jobId) jobId = slugifyJobId(body.instruction || body.title || 'job');
+    else jobId = slugifyJobId(jobId);
+    const openPath = path.join(p.inboxOpen, jobId + '.json');
+    if (fs.existsSync(openPath)) {
+      sendJson(res, 409, { error: 'job_id already open: ' + jobId, correlationId: corrId });
+      return;
+    }
+    const instruction =
+      (body.instruction || body.title || '').trim() ||
+      'Write a one-line work product, sign it, and complete this job.';
+    const workPath =
+      (body.work_path || '').trim() ||
+      path.join('inbox', 'done', jobId + '-' + agent.agent_id + '.txt').replace(/\\/g, '/');
+    const workBody =
+      body.work_body != null
+        ? String(body.work_body)
+        : 'WORK FROM {{AGENT}} ({{AGENT_ID}}) JOB {{JOB_ID}} AT {{UTC}}\n';
+    const job = {
+      job_id: jobId,
+      assigned_to: agent.public_key,
+      assign_to_agent_id: agent.agent_id,
+      instruction,
+      work_body: workBody,
+      work_path: workPath,
+      created_at: new Date().toISOString(),
+      grace: body.grace && typeof body.grace === 'object'
+        ? body.grace
+        : { goal: body.goal || 'pbc.job.demo', note: body.note || 'Public create-job path' }
+    };
+    fs.writeFileSync(openPath, JSON.stringify(job, null, 2) + '\n', 'utf-8');
+    sendJson(res, 200, {
+      created: true,
+      job,
+      path: openPath,
+      assignee: { agent_id: agent.agent_id, display_name: agent.display_name, synth_type: agent.synth_type },
+      correlationId: corrId
+    });
+    logReq(corrId, 'POST', '/pbc/jobs', `${jobId} → ${agent.agent_id}`, 'ok');
+  } catch (e) {
+    sendJson(res, 500, { error: e.message, correlationId: corrId });
+    logReq(corrId, 'POST', '/pbc/jobs', e.message, 'error');
+  }
+}
+
+const WEATHER_TTL_MS = 15 * 60 * 1000;
+
+function weatherEmoji(code, desc) {
+  // Unicode escapes only — keeps Windows source-encoding from mangling glyphs
+  const c = parseInt(code, 10);
+  const d = String(desc || '').toLowerCase();
+  if (c === 113 || d.includes('sunny') || d.includes('clear')) return '\u2600\uFE0F'; // sun
+  if (c === 116 || d.includes('partly')) return '\u26C5'; // sun behind cloud
+  if (c === 119 || c === 122 || d.includes('cloud') || d.includes('overcast')) return '\u2601\uFE0F';
+  if ((c >= 176 && c < 200) || d.includes('rain') || d.includes('drizzle') || d.includes('shower')) return '\uD83C\uDF27\uFE0F';
+  if ((c >= 200 && c < 300) || d.includes('thunder')) return '\u26C8\uFE0F';
+  if (c >= 326 || d.includes('snow') || d.includes('sleet') || d.includes('ice')) return '\u2744\uFE0F';
+  if (d.includes('fog') || d.includes('mist')) return '\uD83C\uDF2B\uFE0F';
+  if (d.includes('wind')) return '\uD83C\uDF2C\uFE0F';
+  return '\uD83C\uDF21\uFE0F';
+}
+
+function httpGetJson(url, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    const mod = url.startsWith('https') ? require('https') : require('http');
+    const req = mod.get(
+      url,
+      {
+        headers: { 'User-Agent': 'purpose-bound-compute-demo/0.1 (local weather cogobj)' },
+        timeout: timeoutMs || 12000
+      },
+      (resp) => {
+        if (resp.statusCode && resp.statusCode >= 400) {
+          reject(new Error('wttr.in HTTP ' + resp.statusCode));
+          resp.resume();
+          return;
+        }
+        const chunks = [];
+        resp.on('data', (c) => chunks.push(c));
+        resp.on('end', () => {
+          try {
+            resolve(JSON.parse(Buffer.concat(chunks).toString('utf-8')));
+          } catch (e) {
+            reject(e);
+          }
+        });
+      }
+    );
+    req.on('error', reject);
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error('wttr.in timeout'));
+    });
+  });
+}
+
+function buildWeatherCogobj(raw, locationQuery) {
+  const area = (raw.nearest_area && raw.nearest_area[0]) || {};
+  const cur = (raw.current_condition && raw.current_condition[0]) || {};
+  const city = (area.areaName && area.areaName[0] && area.areaName[0].value) || locationQuery || 'Local';
+  const region = (area.region && area.region[0] && area.region[0].value) || '';
+  const country = (area.country && area.country[0] && area.country[0].value) || '';
+  const desc = (cur.weatherDesc && cur.weatherDesc[0] && cur.weatherDesc[0].value) || 'Unknown';
+  const code = cur.weatherCode || '';
+  const emoji = weatherEmoji(code, desc);
+  const tempF = cur.temp_F != null ? String(cur.temp_F) : '—';
+  const tempC = cur.temp_C != null ? String(cur.temp_C) : '—';
+  const feelsF = cur.FeelsLikeF != null ? String(cur.FeelsLikeF) : tempF;
+  const humidity = cur.humidity != null ? String(cur.humidity) : '—';
+  const localObs = cur.localObsDateTime || cur.observation_time || null;
+  const line = [city, region].filter(Boolean).join(', ') + ': ' + emoji + '  ' + tempF + '°F';
+  const now = new Date();
+  return {
+    id: crypto.createHash('sha256').update(line + now.toISOString()).digest('hex').slice(0, 32),
+    intent_key: 'BROADCAST::ENVIRONMENT::WEATHER',
+    data: {
+      problem: 'What is the local weather?',
+      goal: 'Zero-Shot Broadcast Resolution',
+      resolution: [
+        'BROADCAST_DATA: ' + line,
+        'SOURCE: wttr.in',
+        'VALID_AS_OF: ' + now.toISOString()
+      ]
+    },
+    provenance: {
+      origin_node_id: 'PBC_BRIDGE',
+      provenance_tier: 'B',
+      timestamp: now.toISOString(),
+      model: 'BROADCAST_LOOKUP'
+    },
+    weather: {
+      city,
+      region,
+      country,
+      location_label: [city, region].filter(Boolean).join(', ') || city,
+      temp_f: tempF,
+      temp_c: tempC,
+      feels_like_f: feelsF,
+      humidity,
+      condition: desc,
+      weather_code: code,
+      emoji,
+      line,
+      local_obs: localObs,
+      query: locationQuery || null
+    },
+    metrics: { total_token_burn: 0, latency_seconds: 0 },
+    aft_score: 0.95,
+    validation: 'ZERO_SHOT_RESOLUTION'
+  };
+}
+
+async function handlePbcWeather(req, res) {
+  const corrId = genCorrelationId();
+  try {
+    const p = ensurePbcDirs();
+    const url = new URL(req.url, 'http://127.0.0.1');
+    const location = (url.searchParams.get('location') || url.searchParams.get('q') || '').trim();
+    const force = url.searchParams.get('force') === '1' || url.searchParams.get('force') === 'true';
+    const cacheKey = location ? location.toLowerCase() : 'auto';
+    const cachePath = path.join(p.cache, 'weather-' + slugifyJobId(cacheKey || 'auto') + '.json');
+
+    if (!force && fs.existsSync(cachePath)) {
+      try {
+        const cached = JSON.parse(fs.readFileSync(cachePath, 'utf-8'));
+        const age = Date.now() - new Date(cached.fetched_at || 0).getTime();
+        if (age >= 0 && age < WEATHER_TTL_MS && cached.cogobj) {
+          sendJson(res, 200, {
+            ...cached,
+            cached: true,
+            age_ms: age,
+            local_time: new Date().toISOString(),
+            local_time_display: new Date().toLocaleString(),
+            correlationId: corrId
+          });
+          logReq(corrId, 'GET', '/pbc/weather', 'cache hit ' + cacheKey, 'ok');
+          return;
+        }
+      } catch (_) { /* refresh */ }
+    }
+
+    // IP-based when location empty; encode path segment when provided
+    const pathSeg = location ? encodeURIComponent(location) : '';
+    const fetchUrl = 'https://wttr.in/' + pathSeg + '?format=j1';
+    const raw = await httpGetJson(fetchUrl, 12000);
+    const cogobj = buildWeatherCogobj(raw, location || null);
+    const payload = {
+      fetched_at: new Date().toISOString(),
+      source: 'wttr.in',
+      cache_key: cacheKey,
+      weather: cogobj.weather,
+      cogobj,
+      cached: false
+    };
+    fs.writeFileSync(cachePath, JSON.stringify(payload, null, 2) + '\n', 'utf-8');
+    // also write canonical weather.json for COGOBJ consumers
+    fs.writeFileSync(p.weatherCache, JSON.stringify(cogobj, null, 2) + '\n', 'utf-8');
+    sendJson(res, 200, {
+      ...payload,
+      local_time: new Date().toISOString(),
+      local_time_display: new Date().toLocaleString(),
+      correlationId: corrId
+    });
+    logReq(corrId, 'GET', '/pbc/weather', cogobj.weather.line, 'ok');
+  } catch (e) {
+    sendJson(res, 502, {
+      error: 'weather broadcast failed: ' + e.message,
+      hint: 'Offline or wttr.in unreachable — strip will show stale cache if any',
+      correlationId: corrId
+    });
+    logReq(corrId, 'GET', '/pbc/weather', e.message, 'error');
+  }
+}
+
 // ---------- Router ----------
 const ROUTES = {
   'GET /health': handleHealth,
   'GET /pbc/paths': handlePbcPaths,
+  'GET /pbc/agents': handlePbcAgents,
+  'GET /pbc/jobs': handlePbcJobsList,
+  'POST /pbc/jobs': handlePbcJobsCreate,
+  'GET /pbc/weather': handlePbcWeather,
   'POST /pbc/enroll': handlePbcEnroll,
   'POST /pbc/init-demo': handlePbcInitDemo,
   'POST /fs/read': handleFsRead,

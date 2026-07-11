@@ -15,7 +15,7 @@
 
 ### Quickstart
 
-Requires **Node.js 18+** and local API keys (Synth Desk only).
+Requires **Node.js 18+**. Synth Desk chat needs local API keys; **job create + weather need only the bridge**.
 
 ```bash
 git clone https://github.com/jdieselny/purpose-bound-compute.git
@@ -23,8 +23,16 @@ cd purpose-bound-compute
 node demo/shared/bridge/bridge.js
 ```
 
-- Synth Desk: open `demo/synth-desk/index.html`
-- PBC Shift: open `demo/pbc-shift/index.html` → **Init demo worker + job** on first run
+- **Synth Desk:** open `demo/synth-desk/index.html` — enroll companions/workers, weather strip, multi-provider chat  
+- **PBC Shift:** open `demo/pbc-shift/index.html` — **Init demo** *or* **Create job** for any enrolled worker, then clock in / sign / clock out  
+- **CLI jobs:**
+
+```bash
+node demo/scripts/create-job.mjs --list-agents
+node demo/scripts/create-job.mjs --assign demo-worker -i "Write a one-line status and sign it"
+```
+
+Both UIs show **local weather + city/region + live clock** via `GET /pbc/weather` (wttr.in → COGOBJ under `.pbc-data/cache/`). Double-click the location label to set city.
 
 Data lands in `./.pbc-data/` (gitignored). Copy it to a second machine and run [offline verification](demo/VERIFY.md) — no private keys required on machine B.
 
@@ -51,7 +59,7 @@ A signed, offline-verifiable receipt binding `{intent/authorization, work perfor
 
 ## Optional external verifier
 
-[ecr-wg](https://github.com/jdieselny/ecr-wg) hosts an independent cleanroom Rust verifier (161/161 conformance vectors) for `EP-RECEIPT-v1`. This repo stands alone without it; the demos use the operational v4 work-signature plane.
+[ecr-wg](https://github.com/jdieselny/ecr-wg) hosts an independent cleanroom Rust verifier (**163/163** conformance vectors) for `EP-RECEIPT-v1`. This repo stands alone without it; the demos use the operational v4 work-signature plane.
 
 ## Spec lane
 
