@@ -488,25 +488,86 @@ PREVIOUS_PROVENANCE: Dima // 2026-05-21T18:11:52.349Z
   .chat-container::-webkit-scrollbar-thumb:hover { background: var(--blue-steel-dim); }
 
   .empty-state {
-    text-align: center;
     margin: auto;
-    color: var(--text-muted);
+    width: min(920px, 100%);
+    color: rgba(122, 174, 200, 0.55);
     font-family: var(--font-mono);
-    font-size: 12px;
-    letter-spacing: 0.1em;
-    line-height: 2;
-    max-width: 640px;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    line-height: 1.55;
+    text-align: left;
+    padding: 8px 4px 24px;
+    position: relative;
   }
   .empty-state .big {
     font-family: var(--font-display);
-    font-size: 28px;
+    font-size: 22px;
     font-weight: 600;
-    letter-spacing: 0.05em;
-    color: var(--text-dim);
-    margin-bottom: 16px;
+    letter-spacing: 0.12em;
+    color: rgba(228, 230, 234, 0.85);
+    margin-bottom: 6px;
     display: block;
+    text-align: center;
   }
-  .empty-state .accent { color: var(--blue-steel); }
+  .empty-state .accent { color: var(--blue-steel); text-shadow: 0 0 18px rgba(122, 174, 200, 0.35); }
+  .empty-state .tagline {
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin-bottom: 18px;
+  }
+  .empty-state .matrix-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px 16px;
+  }
+  @media (max-width: 720px) {
+    .empty-state .matrix-grid { grid-template-columns: 1fr; }
+  }
+  .empty-state .mx-col {
+    border: 1px solid rgba(42, 45, 49, 0.9);
+    background: linear-gradient(180deg, rgba(21, 23, 26, 0.95), rgba(14, 15, 17, 0.4));
+    padding: 12px 12px 14px;
+    min-height: 200px;
+    box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.35);
+  }
+  .empty-state .mx-h {
+    color: var(--blue-steel);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(74, 110, 128, 0.45);
+  }
+  .empty-state .mx-cmd {
+    color: rgba(142, 195, 160, 0.82);
+    margin: 0 0 7px;
+    word-break: break-word;
+  }
+  .empty-state .mx-cmd code {
+    color: rgba(122, 174, 200, 0.95);
+    font-family: inherit;
+    font-size: inherit;
+    background: none;
+  }
+  .empty-state .mx-cmd .dim { color: rgba(90, 94, 100, 0.95); }
+  .empty-state .mx-cmd.egg {
+    color: rgba(212, 168, 126, 0.9);
+    margin-top: 12px;
+    opacity: 0.72;
+  }
+  .empty-state .mx-cmd.egg:hover { opacity: 1; }
+  .empty-state .bootline {
+    text-align: center;
+    margin-top: 16px;
+    color: var(--text-muted);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+  }
+  .empty-state .bootline code { color: var(--blue-steel); }
 
   .message {
     display: flex;
@@ -1198,10 +1259,42 @@ PREVIOUS_PROVENANCE: Dima // 2026-05-21T18:11:52.349Z
 <div class="chat-container" id="chat">
   <div class="empty-state" id="emptyState">
     <span class="big">SYNTH <span class="accent">DESK</span></span>
-    <div style="font-size: 11px; color: var(--text-dim); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Companions — HTTP of AI</div>
-    Define a companion from L1–L4 context. Enroll its thumbprint. Chat across providers with the same body.<br>
-    Local demo bridge only. Workers clock in at <a href="../pbc-shift/index.html" style="color:var(--blue-steel)">PBC Shift</a>.<br><br>
-    <span style="color: var(--text-muted)">Start bridge: <code style="color: var(--blue-steel);">node demo/shared/bridge/bridge.js</code> &middot; Set API keys &middot; Fill L1–L4 &middot; Enroll &middot; Send.</span>
+    <div class="tagline">HTTP of AI // first commands // wake the lattice</div>
+    <div class="matrix-grid" aria-label="Orientation command wallpaper">
+      <div class="mx-col">
+        <div class="mx-h">01 // Boot</div>
+        <p class="mx-cmd"><code>node demo/shared/bridge/bridge.js</code></p>
+        <p class="mx-cmd"><span class="dim"># from repo root</span></p>
+        <p class="mx-cmd"><code>boot continuum from ./purpose-bound-compute</code></p>
+        <p class="mx-cmd"><code>GET /health</code> <span class="dim">→ ONLINE</span></p>
+        <p class="mx-cmd"><code>KEYS</code> <span class="dim">→ set ≥1 provider</span></p>
+        <p class="mx-cmd"><code>TOOLS: ON</code> <span class="dim">when bridge green</span></p>
+      </div>
+      <div class="mx-col">
+        <div class="mx-h">02 // Identity</div>
+        <p class="mx-cmd"><code>self enroll</code> <span class="dim">// ENROLL</span></p>
+        <p class="mx-cmd"><code>fill L1–L4</code> <span class="dim">or COMPANION preset</span></p>
+        <p class="mx-cmd"><code>list agents</code> <span class="dim">→ truthroot</span></p>
+        <p class="mx-cmd"><code>create job --assign &lt;id&gt;</code></p>
+        <p class="mx-cmd"><code>open pbc-shift</code> <span class="dim">// clock in</span></p>
+        <p class="mx-cmd egg" title="Mr. Anderson…">there is no spoon — only receipts</p>
+      </div>
+      <div class="mx-col">
+        <div class="mx-h">03 // Rituals</div>
+        <p class="mx-cmd"><code>list rituals</code> <span class="dim">// help.html</span></p>
+        <p class="mx-cmd"><code>GET /pbc/weather</code> <span class="dim">// L5 strip</span></p>
+        <p class="mx-cmd"><code>verify receipts offline</code></p>
+        <p class="mx-cmd"><code>hop provider</code> <span class="dim">same body</span></p>
+        <p class="mx-cmd"><code>fail closed</code> <span class="dim">always</span></p>
+        <p class="mx-cmd egg">// agent smith is already inside the app that codes the app</p>
+      </div>
+    </div>
+    <p class="bootline">
+      Vendor-agnostic · durable · auditable · local-first<br>
+      Bridge: <code>node demo/shared/bridge/bridge.js</code>
+      · workers: <a href="../pbc-shift/index.html" style="color:var(--blue-steel)">PBC Shift</a>
+      · <a href="help.html" style="color:var(--blue-steel)">man page</a>
+    </p>
   </div>
 </div>
 
